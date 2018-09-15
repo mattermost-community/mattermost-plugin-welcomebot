@@ -1,0 +1,18 @@
+{
+    "id": "com.mattermost.welcomebot",
+    "name": "Welcome Bot",
+    "description": "This plugin adds a WelocomeBot that will help users get added to channels.",
+    "version": "0.0.1",
+    "server": {
+        "executables": {
+            "linux-amd64": "server/dist/plugin-linux-amd64",
+            "darwin-amd64": "server/dist/plugin-darwin-amd64",
+            "windows-amd64": "server/dist/plugin-windows-amd64.exe"
+        },
+        "executable": ""
+    },
+    "settings_schema": {
+        "header": "",
+        "footer": "Configuration via the System Console isn't supported at this time.  Please modify the config.json file directly.  For more information please see https://github.com/mattermost/mattermost-plugin-welcomebot"
+    }
+}
