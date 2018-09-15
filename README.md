@@ -115,7 +115,7 @@ Below is an example of welcome messages modified in the `config.json` file:
                     "~stand-up - For reporting daily standups",
                     "~alerts - Where internal services post critical situations",
                     "~community - A channel focused on customer support",
-                    "~platform - A channel focsued on the weekly R&D meeting"
+                    "~platform - A channel focused on the weekly R&D meeting"
                 ],
                 "Actions" : [
                     {
