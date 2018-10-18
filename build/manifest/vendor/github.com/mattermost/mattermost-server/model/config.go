@@ -6,9 +6,12 @@ package model
 import (
 	"encoding/json"
 	"io"
+	"math"
+	"net"
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -117,6 +120,7 @@ const (
 	LDAP_SETTINGS_DEFAULT_POSITION_ATTRIBUTE   = ""
 	LDAP_SETTINGS_DEFAULT_LOGIN_FIELD_NAME     = ""
 
+	SAML_SETTINGS_DEFAULT_ID_ATTRIBUTE         = ""
 	SAML_SETTINGS_DEFAULT_FIRST_NAME_ATTRIBUTE = ""
 	SAML_SETTINGS_DEFAULT_LAST_NAME_ATTRIBUTE  = ""
 	SAML_SETTINGS_DEFAULT_EMAIL_ATTRIBUTE      = ""
@@ -640,16 +644,17 @@ type SSOSettings struct {
 }
 
 type SqlSettings struct {
-	DriverName                  *string
-	DataSource                  *string
-	DataSourceReplicas          []string
-	DataSourceSearchReplicas    []string
-	MaxIdleConns                *int
-	ConnMaxLifetimeMilliseconds *int
-	MaxOpenConns                *int
-	Trace                       bool
-	AtRestEncryptKey            string
-	QueryTimeout                *int
+	DriverName                          *string
+	DataSource                          *string
+	DataSourceReplicas                  []string
+	DataSourceSearchReplicas            []string
+	MaxIdleConns                        *int
+	ConnMaxLifetimeMilliseconds         *int
+	MaxOpenConns                        *int
+	Trace                               bool
+	AtRestEncryptKey                    string
+	QueryTimeout                        *int
+	EnablePublicChannelsMaterialization *bool
 }
 
 func (s *SqlSettings) SetDefaults() {
@@ -679,6 +684,10 @@ func (s *SqlSettings) SetDefaults() {
 
 	if s.QueryTimeout == nil {
 		s.QueryTimeout = NewInt(30)
+	}
+
+	if s.EnablePublicChannelsMaterialization == nil {
+		s.EnablePublicChannelsMaterialization = NewBool(true)
 	}
 }
 
@@ -987,12 +996,13 @@ type PrivacySettings struct {
 }
 
 type SupportSettings struct {
-	TermsOfServiceLink *string
-	PrivacyPolicyLink  *string
-	AboutLink          *string
-	HelpLink           *string
-	ReportAProblemLink *string
-	SupportEmail       *string
+	TermsOfServiceLink          *string
+	PrivacyPolicyLink           *string
+	AboutLink                   *string
+	HelpLink                    *string
+	ReportAProblemLink          *string
+	SupportEmail                *string
+	CustomTermsOfServiceEnabled *bool
 }
 
 func (s *SupportSettings) SetDefaults() {
@@ -1038,6 +1048,10 @@ func (s *SupportSettings) SetDefaults() {
 
 	if s.SupportEmail == nil {
 		s.SupportEmail = NewString(SUPPORT_SETTINGS_DEFAULT_SUPPORT_EMAIL)
+	}
+
+	if s.CustomTermsOfServiceEnabled == nil {
+		s.CustomTermsOfServiceEnabled = NewBool(false)
 	}
 }
 
@@ -1122,6 +1136,7 @@ type TeamSettings struct {
 	MaxNotificationsPerChannel          *int64
 	EnableConfirmNotificationsToChannel *bool
 	TeammateNameDisplay                 *string
+	ExperimentalViewArchivedChannels    *bool
 	ExperimentalEnableAutomaticReplies  *bool
 	ExperimentalHideTownSquareinLHS     *bool
 	ExperimentalTownSquareIsReadOnly    *bool
@@ -1251,6 +1266,9 @@ func (s *TeamSettings) SetDefaults() {
 		s.EnableUserCreation = NewBool(true)
 	}
 
+	if s.ExperimentalViewArchivedChannels == nil {
+		s.ExperimentalViewArchivedChannels = NewBool(false)
+	}
 }
 
 type ClientRequirements struct {
@@ -1449,8 +1467,9 @@ func (s *LocalizationSettings) SetDefaults() {
 
 type SamlSettings struct {
 	// Basic
-	Enable             *bool
-	EnableSyncWithLdap *bool
+	Enable                        *bool
+	EnableSyncWithLdap            *bool
+	EnableSyncWithLdapIncludeAuth *bool
 
 	Verify  *bool
 	Encrypt *bool
@@ -1467,6 +1486,7 @@ type SamlSettings struct {
 	PrivateKeyFile        *string
 
 	// User Mapping
+	IdAttribute        *string
 	FirstNameAttribute *string
 	LastNameAttribute  *string
 	EmailAttribute     *string
@@ -1489,6 +1509,10 @@ func (s *SamlSettings) SetDefaults() {
 
 	if s.EnableSyncWithLdap == nil {
 		s.EnableSyncWithLdap = NewBool(false)
+	}
+
+	if s.EnableSyncWithLdapIncludeAuth == nil {
+		s.EnableSyncWithLdapIncludeAuth = NewBool(false)
 	}
 
 	if s.Verify == nil {
@@ -1533,6 +1557,10 @@ func (s *SamlSettings) SetDefaults() {
 
 	if s.LoginButtonText == nil || *s.LoginButtonText == "" {
 		s.LoginButtonText = NewString(USER_AUTH_SERVICE_SAML_TEXT)
+	}
+
+	if s.IdAttribute == nil {
+		s.IdAttribute = NewString(SAML_SETTINGS_DEFAULT_ID_ATTRIBUTE)
 	}
 
 	if s.FirstNameAttribute == nil {
@@ -2352,7 +2380,15 @@ func (ss *ServiceSettings) isValid() *AppError {
 		}
 	}
 
-	if len(*ss.ListenAddress) == 0 {
+	host, port, _ := net.SplitHostPort(*ss.ListenAddress)
+	var isValidHost bool
+	if host == "" {
+		isValidHost = true
+	} else {
+		isValidHost = (net.ParseIP(host) != nil) || IsDomainName(host)
+	}
+	portInt, err := strconv.Atoi(port)
+	if err != nil || !isValidHost || portInt < 0 || portInt > math.MaxUint16 {
 		return NewAppError("Config.IsValid", "model.config.is_valid.listen_address.app_error", nil, "", http.StatusBadRequest)
 	}
 
