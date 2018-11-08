@@ -1,4 +1,4 @@
-# WelcomeBot Plugin (Beta)
+# WelcomeBot Plugin (Beta) [![Build Status](https://travis-ci.org/mattermost/mattermost-plugin-welcomebot.svg?branch=master)](https://travis-ci.org/mattermost/mattermost-plugin-welcomebot)
 
 *TODO ADD DESC*
 
