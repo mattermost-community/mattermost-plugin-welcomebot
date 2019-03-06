@@ -1,4 +1,4 @@
-# WelcomeBot Plugin (Beta) [![CircleCI](https://circleci.com/gh/mattermost/mattermost-plugin-welcomebot.svg?style=svg)](https://circleci.com/gh/mattermost/mattermost-plugin-welcomebot)
+# WelcomeBot Plugin (Beta) ![CircleCI branch](https://img.shields.io/circleci/project/github/mattermost/mattermost-plugin-welcomebot/master.svg)
 
 *TODO ADD DESC*
 
