@@ -1,4 +1,4 @@
-# WelcomeBot Plugin (Beta) [![Build Status](https://travis-ci.org/mattermost/mattermost-plugin-welcomebot.svg?branch=master)](https://travis-ci.org/mattermost/mattermost-plugin-welcomebot)
+# WelcomeBot Plugin (Beta) ![CircleCI branch](https://img.shields.io/circleci/project/github/mattermost/mattermost-plugin-welcomebot/master.svg)
 
 *TODO ADD DESC*
 
