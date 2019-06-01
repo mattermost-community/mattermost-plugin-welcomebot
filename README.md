@@ -10,7 +10,7 @@ Use this plugin to improve onboarding and HR processes. It adds a Welcome Bot th
 
 ## Configuration
 
-1. Go to **System Console > Plugins > Management** and click **Enable** to enable the Welcome Bot plugin.(https://docs.mattermost.com/administration/plugins.html#plugin-uploads).
+1. Go to **System Console > Plugins > Management** and click **Enable** to enable the Welcome Bot plugin.
     - If you are running Mattermost v5.11 or earlier, you must first go to the [releases page of this GitHub repository](https://github.com/mattermost/mattermost-plugin-welcomebot/releases), download the latest release, and upload it to your Mattermost instance [following this documentation](https://docs.mattermost.com/administration/plugins.html#plugin-uploads).
 
 2. Modify your `config.json` file to include your custom attributes, under the `PluginSettings`. See below for an example of what this should look like.
