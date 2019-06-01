@@ -13,7 +13,7 @@ Use this plugin to improve onboarding and HR processes. It adds a Welcome Bot th
 1. Go to **System Console > Plugins > Management** and click **Enable** to enable the Welcome Bot plugin.
     - If you are running Mattermost v5.11 or earlier, you must first go to the [releases page of this GitHub repository](https://github.com/mattermost/mattermost-plugin-welcomebot/releases), download the latest release, and upload it to your Mattermost instance [following this documentation](https://docs.mattermost.com/administration/plugins.html#plugin-uploads).
 
-2. Modify your `config.json` file to include your custom attributes, under the `PluginSettings`. See below for an example of what this should look like.
+2. Modify your `config.json` file to include your Welcome Bot's messages and actions, under the `PluginSettings`. See below for an example of what this should look like.
 
 ## Usage
 
@@ -36,7 +36,7 @@ To configure the Welcome Bot, edit your `config.json` file with a message you wa
                 "ActionDisplayName": "User Action",
                 "ActionName": "action-name",
                 "ActionSuccessfulMessage": [
-                    "Message posted after use takes this action and joins channels specified by 'ChannelsAddedTo'."
+                    "Message posted after the user takes this action and joins channels specified by 'ChannelsAddedTo'."
                 ]
                 "ChannelsAddedTo": ["channel1", "channel2"],
             },
@@ -56,10 +56,10 @@ where
 - **Message**: The message posted to the user.
 - (Optional) **AttachmentMessage**: Message text in attachment containing user action buttons. 
 - (Optional) **Actions**: Use this to add new team members to channels automatically or based on which action button they pressed.
-    - **ActionType**: One of `button` or `automatic`. When a `button`, enables uses to select which types of channels they want to join. When `automatic`, the user is automatically added to the specified channels.
+    - **ActionType**: One of `button` or `automatic`. When `button`: enables uses to select which types of channels they want to join. When `automatic`: the user is automatically added to the specified channels.
     - **ActionDisplayName**: Sets the display name for the user action buttons.
     - **ActionName**: Sets the action name used by the plugin to identify which action is taken by a user.
-    - **ActionSuccessfulMessage**: Message posted after use takes this action and joins the specified channels.
+    - **ActionSuccessfulMessage**: Message posted after the user takes this action and joins the specified channels.
     - **ChannelsAddedTo**: List of channels the user is added to.
 
 ## Example
@@ -73,7 +73,7 @@ Those who join the Staff team should be added to a set of channels based on thei
 
 Moreover, those who join the DevSecOps team should automatically be added to Escalation Process and Incidents channels.
 
-To accomplish the above, you can specify the following configuration in your config.json file:
+To accomplish the above, you can specify the following configuration in your config.json file.
 
 ```
 "Plugins": {
@@ -117,7 +117,6 @@ To accomplish the above, you can specify the following configuration in your con
                         "ActionSuccessfulMessage": [
                             "### Awesome! I have added you to the following developer channels:",
                             "~leads - To stay updated on incoming leads",
-                            "~help-desk - To connect with your support team for quick Q&A
                             "~sales-discussion - To collaborate with your fellow account managers",
                             "~win-loss-analysis - To conduct win-loss analysis of closed deals"
                         ]
@@ -131,7 +130,7 @@ To accomplish the above, you can specify the following configuration in your con
                             "### Awesome! I have added you to the following developer channels:",
                             "~bugs - To help investigate or report bugs",
                             "~customer-support - To troubleshoot and resolve customer issues",
-                            "~help-desk - To connect with account managers for quick Q&A"
+                            "~leads - To discuss potential accounts with other account managers"
                         ]
                     }
                 ]
@@ -163,6 +162,19 @@ To accomplish the above, you can specify the following configuration in your con
     "com.mattermost.welcomebot": {
         "Enable": true
     }
+}
+```
+
+We've used `{{.UserDisplayName}}` and `{{.Team.DisplayName}}` in the example `config.json`. You can insert any variable from the `MessageTemplate` struct, which has the following fields:
+
+```go
+type MessageTemplate struct {
+    WelcomeBot      *model.User
+    User            *model.User
+    Team            *model.Team
+    Townsquare      *model.Channel
+    DirectMessage   *model.Channel
+    UserDisplayName string
 }
 ```
 
