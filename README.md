@@ -40,7 +40,7 @@ To configure the Welcome Bot, edit your `config.json` file with a message you wa
                         "ActionSuccessfulMessage": [
                             "Message posted after the user takes this action and joins channels specified by 'ChannelsAddedTo'."
                         ],
-                        "ChannelsAddedTo": ["channel1", "channel2"],
+                        "ChannelsAddedTo": ["channel1", "channel2"]
                     },
                     {
                         "ActionType": "automatic",
