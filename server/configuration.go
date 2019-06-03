@@ -1,9 +1,16 @@
 package main
 
-const (
-	actionTypeAutomatic = "automatic"
-	actionTypeButton    = "button"
+import (
+	"crypto/rand"
+	"encoding/base64"
+	"fmt"
+
+	"github.com/mattermost/mattermost-server/model"
 )
+
+const welcomeBotUsername = "welcomebot"
+const actionTypeAutomatic = "automatic"
+const actionTypeButton = "button"
 
 // ConfigMessageAction are actions that can be taken from the welcome message
 type ConfigMessageAction struct {
@@ -61,6 +68,43 @@ func (p *Plugin) OnConfigurationChange() error {
 	}
 
 	p.welcomeMessages.Store(c.WelcomeMessages)
+
+	if err := p.ensureWelcomeBotUser(); err != nil {
+		p.API.LogError(err.Error())
+		return err
+	}
+
+	return nil
+}
+
+func (p *Plugin) ensureWelcomeBotUser() *model.AppError {
+	var err *model.AppError
+
+	user, _ := p.API.GetUserByUsername(welcomeBotUsername)
+
+	// Ensure the configured user exists.
+	if user == nil {
+		randBytes := make([]byte, 15)
+		rand.Read(randBytes)
+		password := base64.StdEncoding.EncodeToString(randBytes)
+		fmt.Println(password)
+
+		user, err = p.API.CreateUser(&model.User{
+			Username:  welcomeBotUsername,
+			Password:  password,
+			Email:     fmt.Sprintf("%s@mattermost.com", welcomeBotUsername),
+			Nickname:  "Welcome Bot",
+			FirstName: "Welcome",
+			LastName:  "Bot",
+			Position:  "Bot",
+		})
+
+		if err != nil {
+			return err
+		}
+	}
+
+	p.welcomeBotUserID = user.Id
 
 	return nil
 }
