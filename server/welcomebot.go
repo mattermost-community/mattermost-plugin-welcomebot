@@ -34,7 +34,7 @@ func (p *Plugin) constructMessageTemplate(userID, teamID string) *MessageTemplat
 	}
 
 	if data.User != nil {
-		if data.DirectMessage, err = p.API.GetDirectChannel(userID, p.botUserID); err != nil {
+		if data.DirectMessage, err = p.API.GetDirectChannel(userID, p.welcomeBotUserID); err != nil {
 			p.API.LogError("failed to query direct message channel", "user_id", userID)
 			return nil
 		}
@@ -105,7 +105,7 @@ func (p *Plugin) processWelcomeMessage(messageTemplate MessageTemplate, configMe
 	post := &model.Post{
 		Message:   message.String(),
 		ChannelId: messageTemplate.DirectMessage.Id,
-		UserId:    p.botUserID,
+		UserId:    p.welcomeBotUserID,
 	}
 
 	if len(configMessage.AttachmentMessage) > 0 || len(actionButtons) > 0 {
@@ -149,7 +149,7 @@ func (p *Plugin) processActionMessage(messageTemplate MessageTemplate, action *A
 	post := &model.Post{
 		Message:   message.String(),
 		ChannelId: messageTemplate.DirectMessage.Id,
-		UserId:    p.botUserID,
+		UserId:    p.welcomeBotUserID,
 	}
 
 	if _, err := p.API.CreatePost(post); err != nil {
@@ -164,7 +164,7 @@ func (p *Plugin) processActionMessage(messageTemplate MessageTemplate, action *A
 func (p *Plugin) joinChannel(action *Action, channelName string) {
 	if channel, err := p.API.GetChannelByName(action.Context.TeamID, channelName, false); err == nil {
 		if _, err := p.API.AddChannelMember(channel.Id, action.Context.UserID); err != nil {
-			p.API.LogError("Couldn't add user to the channel, continuing to next channel", "user_id", action.Context.UserID, "channel_id", channel.Id)
+			p.API.LogError("Couldn't add user to the channel, continuing to nexe channel", "user_id", action.Context.UserID, "channel_id", channel.Id)
 			return
 		}
 	} else {
