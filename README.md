@@ -55,7 +55,7 @@ To configure the Welcome Bot, edit your `config.json` file with a message you wa
 
 where
 
-- **TeamName**: The team for which the Welcome Bot sends a message for. Refers to the team handle used in the URL. For example, in the following URL the **TeamName** value is `myteam`: https://example.com/myteam/channels/mychannel
+- **TeamName**: The team for which the Welcome Bot sends a message for. Must be the team handle used in the URL, in lowercase. For example, in the following URL the **TeamName** value is `myteam`: https://example.com/myteam/channels/mychannel
 - **DelayInSeconds**: The number of seconds after joining a team that the user receives a welcome message.
 - **Message**: The message posted to the user.
 - (Optional) **AttachmentMessage**: Message text in attachment containing user action buttons. 
