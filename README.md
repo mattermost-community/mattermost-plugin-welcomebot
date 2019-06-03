@@ -1,126 +1,157 @@
-# WelcomeBot Plugin (Beta) ![CircleCI branch](https://img.shields.io/circleci/project/github/mattermost/mattermost-plugin-welcomebot/master.svg)
+# Welcome Bot Plugin ![CircleCI branch](https://img.shields.io/circleci/project/github/mattermost/mattermost-plugin-welcomebot/master.svg)
 
-*TODO ADD DESC*
+Use this plugin to improve onboarding and HR processes. It adds a Welcome Bot that helps add new team members to channels.
 
-## Installation
+![image](https://user-images.githubusercontent.com/13119842/58736467-fd226400-83cb-11e9-827b-6bbe33d062ab.png)
 
-1. Go to the [releases page of this Github repository](https://github.com/mattermost/mattermost-plugin-welcomebot) and download the latest release for your Mattermost server.
-2. Upload this file in the Mattermost **System Console > Plugins > Management** page to install the plugin. To learn more about how to upload a plugin, [see the documentation](https://docs.mattermost.com/administration/plugins.html#plugin-uploads).
-3. Modify your `config.json` file to include the types of welcome messages you wish to send, under the `PluginSettings`. See below for an example of what this should look like.
+*Welcome a new team member to Mattermost Contributors team. Then add the user to a set of channels based on their selection.*
+
+![image](https://user-images.githubusercontent.com/13119842/58736540-30fd8980-83cc-11e9-8e8e-94ea3042b3b1.png)
+
+## Configuration
+
+1. Go to **System Console > Plugins > Management** and click **Enable** to enable the Welcome Bot plugin.
+    - If you are running Mattermost v5.11 or earlier, you must first go to the [releases page of this GitHub repository](https://github.com/mattermost/mattermost-plugin-welcomebot/releases), download the latest release, and upload it to your Mattermost instance [following this documentation](https://docs.mattermost.com/administration/plugins.html#plugin-uploads).
+
+2. Modify your `config.json` file to include your Welcome Bot's messages and actions, under the `PluginSettings`. See below for an example of what this should look like.
 
 ## Usage
 
-*TODO ADD DESC OF CONFIG SETTINGS*
+To configure the Welcome Bot, edit your `config.json` file with a message you want to send to a user in the following format:
 
-Below is an example of welcome messages modified in the `config.json` file:
+```
+"WelcomeMessages": [
+    {
+        "TeamName": "your-team-name",
+        "DelayInSeconds": 3,
+        "Message": [
+            "Your welcome message here. Each list item specifies one line in the message text."
+        ]
+        "AttachmentMessage": [
+            "Attachment message containing user actions"
+        ],
+        "Actions" : [
+            {
+                "ActionType": "button",
+                "ActionDisplayName": "User Action",
+                "ActionName": "action-name",
+                "ActionSuccessfulMessage": [
+                    "Message posted after the user takes this action and joins channels specified by 'ChannelsAddedTo'."
+                ]
+                "ChannelsAddedTo": ["channel1", "channel2"],
+            },
+            {
+                "ActionType": "automatic",
+                "ChannelsAddedTo": ["channel3", "channel4"]
+            }
+        ]
+    }
+]
+```
+
+where
+
+- **TeamName**: The team for which the Welcome Bot sends a message for. Refers to the team handle used in the URL. For example, in the following URL the **TeamName** value is `myteam`: https://example.com/myteam/channels/mychannel
+- **DelayInSeconds**: The number of seconds after joining a team that the user receives a welcome message.
+- **Message**: The message posted to the user.
+- (Optional) **AttachmentMessage**: Message text in attachment containing user action buttons. 
+- (Optional) **Actions**: Use this to add new team members to channels automatically or based on which action button they pressed.
+    - **ActionType**: One of `button` or `automatic`. When `button`: enables uses to select which types of channels they want to join. When `automatic`: the user is automatically added to the specified channels.
+    - **ActionDisplayName**: Sets the display name for the user action buttons.
+    - **ActionName**: Sets the action name used by the plugin to identify which action is taken by a user.
+    - **ActionSuccessfulMessage**: Message posted after the user takes this action and joins the specified channels.
+    - **ChannelsAddedTo**: List of channels the user is added to.
+
+## Example
+
+Suppose you have two teams: one for Staff (with team handle `staff`) which all staff members join, and another for DevSecOps (team handle `devsecops`), which only security engineers join.
+
+Those who join the Staff team should be added to a set of channels based on their role:
+  - Developers added to Bugs, Jira Tasks, and Sprint Planning channels
+  - Account Managers added to Leads, Sales Discussion, and Win-Loss Analysis channels
+  - Support added to Bugs, Customer Support and Leads channels
+
+Moreover, those who join the DevSecOps team should automatically be added to Escalation Process and Incidents channels.
+
+To accomplish the above, you can specify the following configuration in your config.json file.
 
 ```
 "Plugins": {
     "com.mattermost.welcomebot": {
         "WelcomeMessages": [
             {
-                "TeamName": "core",
-                "DelayInSeconds": 3,
+                "TeamName": "staff",
+                "DelayInSeconds": 5,
                 "Message": [
-                    "# Welcome {{.UserDisplayName}} to the Mattermost {{.Team.DisplayName}} nightly build server!",
+                    "### Welcome {{.UserDisplayName}} to the Staff {{.Team.DisplayName}} team!",
                     "",
-                    "### Please review our Code of Conduct ",
+                    "If you have any questions about your account, please message your @system-admin.",
                     "",
-                    "Thank you for visiting the virtual office of the Mattermost core team, and for your interest in the [Mattermost open source project](http://www.mattermost.org/vision/#mattermost-teams-v1). ",
-                    "",
-                    "This is the virtual office of for the Mattermost core team, project contributors, testers and invited guests. Please behave here as you would as a guest in an office space where people are working. ",
-                    "",
-                    "Important notes:",
-                    "",
-                    "##### 1) This is a virtual office, not a demo server",
-                    "",
-                    "You can use [Mattermost install guides](http://www.mattermost.org/installation/) to install your own version of Matterrmost if you want to experiment with features. ",
-                    "",
-                    "##### 2) This is a virtual office, not the Mattermost public forum (the [forum](https://forum.mattermost.org/) is here)",
-                    "",
-                    "Please do not create public channels or private groups. If you want to discuss something that’s not a topic started by the core team, please start a topic on the [public forum](https://forum.mattermost.org/), or discuss in the [IRC Public Discussion channel](https://pre-release.mattermost.com/core/channels/irc#). ",
-                    "",
-                    "If people are responding to your @ mentions, it’s fine to continue a conversation. If your mentions have been repeatedly been ignored, please stop. ",
-                    "",
-                    "Please move conversations to the appropriate channel by topic and do not post long threads in the Reception area. Moderators delete or move your messages if the topic isn't relevant to 300+ members viewing the Reception area. ",
-                    "",
-                    "##### 3) This is a virtual office, not a substitute for community systems",
-                    "",
-                    "There are standard community systems for [bugs, feature ideas, and troubleshooting help](http://docs.mattermost.com/process/community-systems.html). ",
-                    "",
-                    "If you receive a request from the core team, or matterbot, to change your behavior in the office, please follow the request or leave the office. ",
-                    "",
-                    "In addition to the basics discussed above the [Contributor Code of Conduct](http://contributor-covenant.org/version/1/3/0/code_of_conduct.txt) also applies.",
-                    "",
-                    "Updated March 5, 2016"
+                    "For feedback about the Mattermost app, please share in the ~mattermost channel."
                 ]
             },
             {
-                "TeamName": "core",
-                "DelayInSeconds": 5,
+                "TeamName": "staff",
+                "DelayInSeconds": 10,
                 "AttachmentMessage": [
-                    "I can help you get started by joining you to a bunch of existing channels!  Which types of channels would you like to join?"
+                    "Let's get started by adding you to key channels! What is your role in the company?"
                 ],
                 "Actions" : [
                     {
                         "ActionType": "button",
-                        "ActionDisplayName": "I'm interested in Support",
-                        "ActionName": "support-action",
-                        "ChannelsAddedTo": ["peer-to-peer-help", "bugs"],
-                        "ActionSuccessfulMessage": [
-                            "### Awesome, I have added you to the following support related channels!",
-                            "~peer-to-peer-help - General help and setup",
-                            "~bugs - To help investigate or report bugs"
-                        ]
-                    },
-                    {
-                        "ActionType": "button",
-                        "ActionDisplayName": "Developing on Mattermost",
+                        "ActionDisplayName": "Developer",
                         "ActionName": "developer-action",
-                        "ChannelsAddedTo": ["developers", "developer-toolkit", "developer-meeting", "developer-performance", "bugs"],
+                        "ChannelsAddedTo": ["bugs", "jira-tasks", "sprint-planning"],
                         "ActionSuccessfulMessage": [
-                            "### Baller, I have added you to the following developer related channels!",
-                            "~developers - Great for general developer questions",
-                            "~developer-toolkit - Great questions about plugins or integrations",
-                            "~developer-meeting - Weekly core staff and community meeting",
-                            "~developer-performance - Great for questions about performance or load testing",
-                            "~bugs - To help investigate or report bugs"
+                            "### Awesome! I have added you to the following developer channels:",
+                            "~bugs - To help investigate or report bugs",
+                            "~jira-tasks - To stay updated on Jira tasks",
+                            "~sprint-planning - To plan and manage your team's Jira sprint"
                         ]
                     },
                     {
                         "ActionType": "button",
-                        "ActionDisplayName": "I don't Know?",
-                        "ActionName": "do-not-know-action",
-                        "ChannelsAddedTo": ["peer-to-peer-help", "feature-ideas", "developers", "bugs"],
+                        "ActionDisplayName": "Account Manager",
+                        "ActionName": "account-manager-action",
+                        "ChannelsAddedTo": ["leads", "sales-discussion", "win-loss-analysis"],
                         "ActionSuccessfulMessage": [
-                            "### Great, I have added you to a few channels that might be interesting!",
-                            "~peer-to-peer-help - General help and setup",
-                            "~feature-ideas - To discuss potential feature ideas",
-                            "~developers - Great for general developer questions",
-                            "~bugs - To help investigate or report bugs"
+                            "### Awesome! I have added you to the following developer channels:",
+                            "~leads - To stay updated on incoming leads",
+                            "~sales-discussion - To collaborate with your fellow account managers",
+                            "~win-loss-analysis - To conduct win-loss analysis of closed deals"
+                        ]
+                    },
+                    {
+                        "ActionType": "button",
+                        "ActionDisplayName": "Support",
+                        "ActionName": "support-action",
+                        "ChannelsAddedTo": ["bugs", "customer-support", "leads"],
+                        "ActionSuccessfulMessage": [
+                            "### Awesome! I have added you to the following developer channels:",
+                            "~bugs - To help investigate or report bugs",
+                            "~customer-support - To troubleshoot and resolve customer issues",
+                            "~leads - To discuss potential accounts with other account managers"
                         ]
                     }
                 ]
             },
             {
-                "TeamName": "private-core",
-                "DelayInSeconds": 3,
+                "TeamName": "devsecops",
+                "DelayInSeconds": 5,
                 "Message": [
-                    "# Welcome {{.UserDisplayName}} to the {{.Team.DisplayName}} Team for staff!",
+                    "### Welcome {{.UserDisplayName}} to the {{.Team.DisplayName}} team!",
                     "",
-                    "*If you are not a core staff member and ended up on this team by accident please report this issue and leave the team!*",
+                    "**If you are not a member of the Security Meta Team and ended up on this team by accident, please report this issue and leave the team!**",
                     "",
-                    "#### I've added you to a few channels to get you started!",
+                    "##### I've added you to a few channels to get you started:",
                     "",
-                    "~stand-up - For reporting daily standups",
-                    "~alerts - Where internal services post critical situations",
-                    "~community - A channel focused on customer support",
-                    "~platform - A channel focused on the weekly R&D meeting"
+                    "~escalation-process - To review the DevSecOps escalation process",
+                    "~incidents - To collaborate and resolve seucrity incidents",
                 ],
                 "Actions" : [
                     {
                         "ActionType": "automatic",
-                        "ChannelsAddedTo": ["standup", "alerts", "community", "platform"]
+                        "ChannelsAddedTo": ["escalation-process", "incidents"]
                     }
                 ]
             }
@@ -133,3 +164,26 @@ Below is an example of welcome messages modified in the `config.json` file:
     }
 }
 ```
+
+We've used `{{.UserDisplayName}}` and `{{.Team.DisplayName}}` in the example `config.json`. You can insert any variable from the `MessageTemplate` struct, which has the following fields:
+
+```go
+type MessageTemplate struct {
+    WelcomeBot      *model.User
+    User            *model.User
+    Team            *model.Team
+    Townsquare      *model.Channel
+    DirectMessage   *model.Channel
+    UserDisplayName string
+}
+```
+
+## Development
+
+This plugin contains a server and webapp portion.
+
+Use `make dist` to build distributions of the plugin that you can upload to a Mattermost server.
+Use `make check-style` to check the style.
+Use `make deploy` to deploy the plugin to your local server.
+
+For additional information on developing plugins, refer to [our plugin developer documentation](https://developers.mattermost.com/extend/plugins/).
