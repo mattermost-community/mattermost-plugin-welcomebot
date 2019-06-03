@@ -3,14 +3,39 @@ package main
 import (
 	"sync/atomic"
 
+	"github.com/mattermost/mattermost-server/model"
 	"github.com/mattermost/mattermost-server/plugin"
+	"github.com/pkg/errors"
+)
+
+const (
+	botUsername    = "welcomebot"
+	botDisplayName = "Welcomebot"
+	botDescription = "A bot account created by the Welcomebot plugin."
 )
 
 // Plugin represents the welcome bot plugin
 type Plugin struct {
 	plugin.MattermostPlugin
 
-	welcomeBotUserID string
+	// botUserID of the created bot account.
+	botUserID string
 
 	welcomeMessages atomic.Value
+}
+
+// OnActivate ensure the bot account exists
+func (p *Plugin) OnActivate() error {
+	bot := &model.Bot{
+		Username:    botUsername,
+		DisplayName: botDisplayName,
+		Description: botDescription,
+	}
+	botUserID, appErr := p.Helpers.EnsureBot(bot)
+	if appErr != nil {
+		return errors.Wrap(appErr, "failed to ensure bot user")
+	}
+	p.botUserID = botUserID
+
+	return nil
 }
