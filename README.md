@@ -20,38 +20,42 @@ Use this plugin to improve onboarding and HR processes. It adds a Welcome Bot th
 To configure the Welcome Bot, edit your `config.json` file with a message you want to send to a user in the following format:
 
 ```
-"WelcomeMessages": [
-    {
-        "TeamName": "your-team-name",
-        "DelayInSeconds": 3,
-        "Message": [
-            "Your welcome message here. Each list item specifies one line in the message text."
-        ]
-        "AttachmentMessage": [
-            "Attachment message containing user actions"
-        ],
-        "Actions" : [
+"Plugins": {
+    "com.mattermost.welcomebot": {
+        "WelcomeMessages": [
             {
-                "ActionType": "button",
-                "ActionDisplayName": "User Action",
-                "ActionName": "action-name",
-                "ActionSuccessfulMessage": [
-                    "Message posted after the user takes this action and joins channels specified by 'ChannelsAddedTo'."
+                "TeamName": "your-team-name",
+                "DelayInSeconds": 3,
+                "Message": [
+                    "Your welcome message here. Each list item specifies one line in the message text."
+                ],
+                "AttachmentMessage": [
+                    "Attachment message containing user actions"
+                ],
+                "Actions" : [
+                    {
+                        "ActionType": "button",
+                        "ActionDisplayName": "User Action",
+                        "ActionName": "action-name",
+                        "ActionSuccessfulMessage": [
+                            "Message posted after the user takes this action and joins channels specified by 'ChannelsAddedTo'."
+                        ],
+                        "ChannelsAddedTo": ["channel-1", "channel-2"]
+                    },
+                    {
+                        "ActionType": "automatic",
+                        "ChannelsAddedTo": ["channel-3", "channel-4"]
+                    }
                 ]
-                "ChannelsAddedTo": ["channel1", "channel2"],
-            },
-            {
-                "ActionType": "automatic",
-                "ChannelsAddedTo": ["channel3", "channel4"]
             }
         ]
     }
-]
+},
 ```
 
 where
 
-- **TeamName**: The team for which the Welcome Bot sends a message for. Refers to the team handle used in the URL. For example, in the following URL the **TeamName** value is `myteam`: https://example.com/myteam/channels/mychannel
+- **TeamName**: The team for which the Welcome Bot sends a message for. Must be the team handle used in the URL, in lowercase. For example, in the following URL the **TeamName** value is `my-team`: https://example.com/my-team/channels/my-channel
 - **DelayInSeconds**: The number of seconds after joining a team that the user receives a welcome message.
 - **Message**: The message posted to the user.
 - (Optional) **AttachmentMessage**: Message text in attachment containing user action buttons. 
@@ -60,7 +64,7 @@ where
     - **ActionDisplayName**: Sets the display name for the user action buttons.
     - **ActionName**: Sets the action name used by the plugin to identify which action is taken by a user.
     - **ActionSuccessfulMessage**: Message posted after the user takes this action and joins the specified channels.
-    - **ChannelsAddedTo**: List of channels the user is added to.
+    - **ChannelsAddedTo**: List of channel names the user is added to. Must be the channel handle used in the URL, in lowercase. For example, in the following URL the **channel name** value is `my-channel`: https://example.com/my-team/channels/my-channel
 
 ## Example
 
