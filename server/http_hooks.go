@@ -13,7 +13,14 @@ import (
 func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
 	var action *Action
 	if err := json.NewDecoder(r.Body).Decode(&action); err != nil || action == nil {
-		p.encodeEphermalMessage(w, "WelcomeBot Error: We could not decode the action")
+		p.encodeEphemeralMessage(w, "WelcomeBot Error: We could not decode the action")
+		return
+	}
+
+	mattermostUserId := r.Header.Get("Mattermost-User-Id")
+	if mattermostUserId == "" || mattermostUserId != action.Context.UserID {
+		p.API.LogError("http request not authenticated: no Mattermost-User-Id")
+		http.Error(w, "not authenticated", http.StatusUnauthorized)
 		return
 	}
 
@@ -22,19 +29,19 @@ func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Req
 
 	if data.User, err = p.API.GetUser(action.Context.UserID); err != nil {
 		p.API.LogError("failed to query user", "user_id", action.Context.UserID)
-		p.encodeEphermalMessage(w, "WelcomeBot Error: We could not find the supplied user")
+		p.encodeEphemeralMessage(w, "WelcomeBot Error: We could not find the supplied user")
 		return
 	}
 
 	if data.Team, err = p.API.GetTeam(action.Context.TeamID); err != nil {
 		p.API.LogError("failed to query team", "team_id", action.Context.TeamID)
-		p.encodeEphermalMessage(w, "WelcomeBot Error: We could not find the supplied team")
+		p.encodeEphemeralMessage(w, "WelcomeBot Error: We could not find the supplied team")
 		return
 	}
 
 	if data.DirectMessage, err = p.API.GetDirectChannel(action.Context.UserID, p.botUserID); err != nil {
 		p.API.LogError("failed to query direct message channel", "user_id", action.Context.UserID)
-		p.encodeEphermalMessage(w, "WelcomeBot Error: We could not find the welcome bot direct message channel")
+		p.encodeEphemeralMessage(w, "WelcomeBot Error: We could not find the welcome bot direct message channel")
 		return
 	}
 
@@ -43,7 +50,7 @@ func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Req
 	// Check to make sure you're still in the team
 	if teamMember, err := p.API.GetTeamMember(action.Context.TeamID, action.Context.UserID); err != nil || teamMember == nil || teamMember.DeleteAt > 0 {
 		p.API.LogError("Didn't have access to team", "user_id", action.Context.UserID, "team_id", action.Context.TeamID)
-		p.encodeEphermalMessage(w, "WelcomeBot Error: You do not appear to have access to this team")
+		p.encodeEphemeralMessage(w, "WelcomeBot Error: You do not appear to have access to this team")
 		return
 	}
 
@@ -54,20 +61,20 @@ func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Req
 				for _, ac := range wm.Actions {
 					if ac.ActionName == action.Context.Action {
 						p.processActionMessage(*data, action, *ac)
-						p.encodeEphermalMessage(w, "")
+						p.encodeEphemeralMessage(w, "")
 						return
 					}
 				}
 			}
 		}
 
-		p.encodeEphermalMessage(w, "WelcomeBot Error: The action wasn't found for "+action.Context.Action)
+		p.encodeEphemeralMessage(w, "WelcomeBot Error: The action wasn't found for "+action.Context.Action)
 	default:
 		http.NotFound(w, r)
 	}
 }
 
-func (p *Plugin) encodeEphermalMessage(w http.ResponseWriter, message string) {
+func (p *Plugin) encodeEphemeralMessage(w http.ResponseWriter, message string) {
 	w.Header().Set("Content-Type", "application/json")
 
 	resp := model.PostActionIntegrationResponse{
