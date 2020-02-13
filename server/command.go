@@ -16,7 +16,7 @@ func getCommand() *model.Command {
 	return &model.Command{
 		Trigger:          "welcomebot",
 		DisplayName:      "welcomebot",
-		Description:      "Welcome Bot helps adding new team members to channels.",
+		Description:      "Welcome Bot helps add new team members to channels.",
 		AutoComplete:     true,
 		AutoCompleteDesc: "Available commands: preview, help",
 		AutoCompleteHint: "[command]",
@@ -32,6 +32,17 @@ func (p *Plugin) postCommandResponse(args *model.CommandArgs, text string) {
 	_ = p.API.SendEphemeralPost(args.UserId, post)
 }
 
+func (p *Plugin) hasSysadminRole(userId string) (bool, error) {
+	user, appErr := p.API.GetUser(userId)
+	if appErr != nil {
+		return false, appErr
+	}
+	if !strings.Contains(user.Roles, "system_admin") {
+		return false, nil
+	}
+	return true, nil
+}
+
 func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
 	split := strings.Fields(args.Command)
 	command := split[0]
@@ -45,6 +56,16 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 	}
 
 	if command != "/welcomebot" {
+		return &model.CommandResponse{}, nil
+	}
+
+	isSysadmin, err := p.hasSysadminRole(args.UserId)
+	if err != nil {
+		p.postCommandResponse(args, fmt.Sprintf("authorization failed: %w", err))
+		return &model.CommandResponse{}, nil
+	}
+	if !isSysadmin {
+		p.postCommandResponse(args, "/welcomebot commands can only be executed by the user with system admin role")
 		return &model.CommandResponse{}, nil
 	}
 
@@ -101,9 +122,7 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 		p.postCommandResponse(args, str.String())
 		return &model.CommandResponse{}, nil
 	case "help":
-		text := "###### Mattermost welcomebot Plugin - Slash Command Help\n" + strings.Replace(COMMAND_HELP, "|", "`", -1)
-		p.postCommandResponse(args, text)
-		return &model.CommandResponse{}, nil
+		fallthrough
 	case "":
 		text := "###### Mattermost welcomebot Plugin - Slash Command Help\n" + strings.Replace(COMMAND_HELP, "|", "`", -1)
 		p.postCommandResponse(args, text)
