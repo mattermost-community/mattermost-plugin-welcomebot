@@ -37,5 +37,7 @@ func (p *Plugin) OnActivate() error {
 	}
 	p.botUserID = botUserID
 
+	p.API.RegisterCommand(getCommand())
+
 	return nil
 }

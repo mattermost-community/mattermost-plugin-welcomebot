@@ -57,14 +57,49 @@ func (p *Plugin) getSiteURL() string {
 	return *config.ServiceSettings.SiteURL
 }
 
-func (p *Plugin) processWelcomeMessage(messageTemplate MessageTemplate, configMessage ConfigMessage) {
-	time.Sleep(time.Second * time.Duration(configMessage.DelayInSeconds))
+func (p *Plugin) newSampleMessageTemplate(teamName, userId string) (*MessageTemplate, error) {
+	data := &MessageTemplate{}
+	var err *model.AppError
 
-	siteURL := p.getSiteURL()
-	if strings.Contains(siteURL, "localhost") || strings.Contains(siteURL, "127.0.0.1") {
-		p.API.LogWarn(`Site url is set to localhost or 127.0.0.1.  For this to work properly you must also set "AllowedUntrustedInternalConnections": "127.0.0.1" in config.json`)
+	if data.User, err = p.API.GetUser(userId); err != nil {
+		p.API.LogError("failed to query user", "user_id", userId, "err", err)
+		return nil, fmt.Errorf("failed to query user %s: %w", userId, err)
 	}
 
+	if data.Team, err = p.API.GetTeamByName(teamName); err != nil {
+		p.API.LogError("failed to query team", "team_name", teamName, "err", err)
+		return nil, fmt.Errorf("failed to query team %s: %w", teamName, err)
+	}
+
+	if data.Townsquare, err = p.API.GetChannelByName(data.Team.Id, "town-square", false); err != nil {
+		p.API.LogError("failed to query town-square", "team_name", teamName)
+		return nil, fmt.Errorf("failed to query town-square %s: %w", teamName, err)
+	}
+
+	if data.DirectMessage, err = p.API.GetDirectChannel(data.User.Id, p.botUserID); err != nil {
+		p.API.LogError("failed to query direct message channel", "user_name", data.User.Username)
+		return nil, fmt.Errorf("failed to query direct message channel %s: %w", data.User.Id, err)
+	}
+
+	data.UserDisplayName = data.User.GetDisplayName(model.SHOW_NICKNAME_FULLNAME)
+
+	return data, nil
+}
+
+func (p *Plugin) previewWelcomeMessage(teamName string, args *model.CommandArgs, configMessage ConfigMessage) error {
+	messageTemplate, err := p.newSampleMessageTemplate(teamName, args.UserId)
+	if err != nil {
+		return err
+	}
+
+	post := p.renderWelcomeMessage(*messageTemplate, configMessage)
+	post.ChannelId = args.ChannelId
+	_ = p.API.SendEphemeralPost(args.UserId, post)
+
+	return nil
+}
+
+func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMessage ConfigMessage) *model.Post {
 	actionButtons := make([]*model.PostAction, 0)
 
 	for _, configAction := range configMessage.Actions {
@@ -90,7 +125,7 @@ func (p *Plugin) processWelcomeMessage(messageTemplate MessageTemplate, configMe
 						"team_id": messageTemplate.Team.Id,
 						"user_id": messageTemplate.User.Id,
 					},
-					URL: fmt.Sprintf("%v/plugins/%v/addchannels", siteURL, manifest.Id),
+					URL: fmt.Sprintf("%v/plugins/%v/addchannels", p.getSiteURL(), manifest.Id),
 				},
 			}
 
@@ -103,9 +138,8 @@ func (p *Plugin) processWelcomeMessage(messageTemplate MessageTemplate, configMe
 	tmpMsg.Execute(&message, messageTemplate)
 
 	post := &model.Post{
-		Message:   message.String(),
-		ChannelId: messageTemplate.DirectMessage.Id,
-		UserId:    p.botUserID,
+		Message: message.String(),
+		UserId:  p.botUserID,
 	}
 
 	if len(configMessage.AttachmentMessage) > 0 || len(actionButtons) > 0 {
@@ -127,6 +161,20 @@ func (p *Plugin) processWelcomeMessage(messageTemplate MessageTemplate, configMe
 			"attachments": attachments,
 		}
 	}
+
+	return post
+}
+
+func (p *Plugin) processWelcomeMessage(messageTemplate MessageTemplate, configMessage ConfigMessage) {
+	time.Sleep(time.Second * time.Duration(configMessage.DelayInSeconds))
+
+	siteURL := p.getSiteURL()
+	if strings.Contains(siteURL, "localhost") || strings.Contains(siteURL, "127.0.0.1") {
+		p.API.LogWarn(`Site url is set to localhost or 127.0.0.1.  For this to work properly you must also set "AllowedUntrustedInternalConnections": "127.0.0.1" in config.json`)
+	}
+
+	post := p.renderWelcomeMessage(messageTemplate, configMessage)
+	post.ChannelId = messageTemplate.DirectMessage.Id
 
 	if _, err := p.API.CreatePost(post); err != nil {
 		p.API.LogError(
