@@ -10,7 +10,11 @@ import (
 )
 
 const COMMAND_HELP = `* |/welcomebot preview [team-name] [user-name]| - preview the welcome message for the given team name. The current user's username will be used to render the template.
-* |/welcomebot list| - list the teams for which welcome messages were defined`
+* |/welcomebot list| - list the teams for which welcome messages were defined
+* |/welcomebot set_channel_welcome [welcome-message]| - set the welcome message for the given channel. Direct channels are not supported.
+* |/welcomebot get_channel_welcome| - print the welcome message set for the given channel (if any)
+* |/welcomebot delete_channel_welcome| - delete the welcome message for the given channel (if any)
+`
 
 func getCommand() *model.Command {
 	return &model.Command{
@@ -18,7 +22,7 @@ func getCommand() *model.Command {
 		DisplayName:      "welcomebot",
 		Description:      "Welcome Bot helps add new team members to channels.",
 		AutoComplete:     true,
-		AutoCompleteDesc: "Available commands: preview, help",
+		AutoCompleteDesc: "Available commands: preview, help, list, set_channel_welcome, get_channel_welcome, delete_channel_welcome",
 		AutoCompleteHint: "[command]",
 	}
 }
@@ -81,7 +85,7 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 		found := false
 		for _, message := range p.getWelcomeMessages() {
 			if message.TeamName == teamName {
-				if err := p.previewWelcomeMessage(teamName, args, *message); err != nil {
+				if err = p.previewWelcomeMessage(teamName, args, *message); err != nil {
 					errMsg := fmt.Sprintf("error occured while processing greeting for team `%s`: `%s`", teamName, err)
 					p.postCommandResponse(args, errMsg)
 					return &model.CommandResponse{}, nil
@@ -120,6 +124,91 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 			str.WriteString(fmt.Sprintf("\n * %s", team))
 		}
 		p.postCommandResponse(args, str.String())
+		return &model.CommandResponse{}, nil
+	case "set_channel_welcome":
+		if len(parameters) == 0 {
+			p.postCommandResponse(args, "`set_channel_welcome` command requires the message to be provided")
+			return &model.CommandResponse{}, nil
+		}
+
+		channelInfo, appErr := p.API.GetChannel(args.ChannelId)
+		if appErr != nil {
+			errMsg := fmt.Sprintf(
+				"error occured while checking the type of the chanelId `%s`: `%s`",
+				args.ChannelId, err)
+			p.postCommandResponse(args, errMsg)
+			return &model.CommandResponse{}, nil
+		}
+
+		if channelInfo.Type == model.CHANNEL_PRIVATE {
+			p.postCommandResponse(
+				args, "welcome messages are not supported for direct channels")
+			return &model.CommandResponse{}, nil
+		}
+
+		// strings.Fields will consume ALL whitespace, so plain re-joining of the
+		// parameters slice will not produce the same message
+		message := strings.SplitN(args.Command, "set_channel_welcome", 2)[1]
+		message = strings.TrimSpace(message)
+
+		key := fmt.Sprintf("%s%s", args.ChannelId, WELCOMEBOT_CHANNEL_WELCOME_KEY)
+		if appErr := p.API.KVSet(key, []byte(message)); appErr != nil {
+			errMsg := fmt.Sprintf(
+				"error occured while storing the welcome message for the chanel: `%s`",
+				appErr)
+			p.postCommandResponse(args, errMsg)
+			return &model.CommandResponse{}, nil
+		}
+
+		p.postCommandResponse(args, fmt.Sprintf("stored the welcome message:\n%s", message))
+		return &model.CommandResponse{}, nil
+
+	case "get_channel_welcome":
+		if len(parameters) > 0 {
+			p.postCommandResponse(args, "`get_channel_welcome` command does not accept any extra parameters")
+			return &model.CommandResponse{}, nil
+		}
+
+		key := fmt.Sprintf("%s%s", args.ChannelId, WELCOMEBOT_CHANNEL_WELCOME_KEY)
+		if data, appErr := p.API.KVGet(key); appErr != nil {
+			errMsg := fmt.Sprintf(
+				"error occured while retrieving the welcome message for the chanel: `%s`",
+				appErr)
+			p.postCommandResponse(args, errMsg)
+		} else if data == nil {
+			p.postCommandResponse(args, "welcome message has not been set yet")
+		} else {
+			p.postCommandResponse(args, fmt.Sprintf("Welcome message is:\n%s", string(data)))
+		}
+
+		return &model.CommandResponse{}, nil
+
+	case "delete_channel_welcome":
+		if len(parameters) > 0 {
+			p.postCommandResponse(args, "`delete_channel_welcome` command does not accept any extra parameters")
+			return &model.CommandResponse{}, nil
+		}
+
+		key := fmt.Sprintf("%s%s", args.ChannelId, WELCOMEBOT_CHANNEL_WELCOME_KEY)
+		if data, appErr := p.API.KVGet(key); appErr != nil {
+			errMsg := fmt.Sprintf(
+				"error occured while retrieving the welcome message for the chanel: `%s`",
+				appErr)
+			p.postCommandResponse(args, errMsg)
+			return &model.CommandResponse{}, nil
+		} else if data == nil {
+			p.postCommandResponse(args, "welcome message has not been set yet")
+			return &model.CommandResponse{}, nil
+		}
+
+		if appErr := p.API.KVDelete(key); appErr != nil {
+			errMsg := fmt.Sprintf(
+				"error occured while deleting the welcome message for the chanel: `%s`",
+				appErr)
+			p.postCommandResponse(args, errMsg)
+		} else {
+			p.postCommandResponse(args, "welcome message has been deleted")
+		}
 		return &model.CommandResponse{}, nil
 	case "help":
 		fallthrough
