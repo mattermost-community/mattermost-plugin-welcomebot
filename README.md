@@ -69,7 +69,7 @@ where
 The preview of the configured messages can be done via bot commands:
 * `/welcomebot help` - show a short usage information
 * `/welcomebot list` - lists the teams for which greetings were defined
-* `/welcomebot preview` [team-name] - sends ephemeral messages to the user calling the command, with the preview of the welcome message[s] for the given team name and the user that requested the preview
+* `/welcomebot preview [team-name]` - sends ephemeral messages to the user calling the command, with the preview of the welcome message[s] for the given team name and the user that requested the preview
 
 ## Example
 
