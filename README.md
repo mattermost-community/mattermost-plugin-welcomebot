@@ -150,7 +150,7 @@ To accomplish the above, you can specify the following configuration in your con
                     "##### I've added you to a few channels to get you started:",
                     "",
                     "~escalation-process - To review the DevSecOps escalation process",
-                    "~incidents - To collaborate and resolve seucrity incidents",
+                    "~incidents - To collaborate and resolve seucrity incidents"
                 ],
                 "Actions" : [
                     {
