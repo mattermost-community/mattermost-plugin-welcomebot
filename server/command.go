@@ -61,7 +61,7 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 
 	isSysadmin, err := p.hasSysadminRole(args.UserId)
 	if err != nil {
-		p.postCommandResponse(args, fmt.Sprintf("authorization failed: %w", err))
+		p.postCommandResponse(args, fmt.Sprintf("authorization failed: %v", err))
 		return &model.CommandResponse{}, nil
 	}
 	if !isSysadmin {
