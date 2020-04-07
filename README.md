@@ -1,5 +1,8 @@
 # Welcome Bot Plugin ![CircleCI branch](https://img.shields.io/circleci/project/github/mattermost/mattermost-plugin-welcomebot/master.svg)
 
+**Maintainer:** [@jfrerich](https://github.com/jfrerich)
+**Co-Maintainer:** [@iomodo](https://github.com/iomodo)
+
 Use this plugin to improve onboarding and HR processes. It adds a Welcome Bot that helps add new team members to channels.
 
 ![image](https://user-images.githubusercontent.com/13119842/58736467-fd226400-83cb-11e9-827b-6bbe33d062ab.png)
