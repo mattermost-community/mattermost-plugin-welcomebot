@@ -129,7 +129,7 @@ func (p *Plugin) executeCommandSetWelcome(args *model.CommandArgs) *model.Comman
 	message := strings.SplitN(args.Command, "set_channel_welcome", 2)[1]
 	message = strings.TrimSpace(message)
 
-	key := fmt.Sprintf("%s%s", args.ChannelId, WELCOMEBOT_CHANNEL_WELCOME_KEY)
+	key := fmt.Sprintf("%s%s", WELCOMEBOT_CHANNEL_WELCOME_KEY, args.ChannelId)
 	if appErr := p.API.KVSet(key, []byte(message)); appErr != nil {
 		return p.responsef("error occured while storing the welcome message for the chanel: `%s`", appErr)
 	}
@@ -138,7 +138,7 @@ func (p *Plugin) executeCommandSetWelcome(args *model.CommandArgs) *model.Comman
 }
 
 func (p *Plugin) executeCommandGetWelcome(args *model.CommandArgs) *model.CommandResponse {
-	key := fmt.Sprintf("%s%s", args.ChannelId, WELCOMEBOT_CHANNEL_WELCOME_KEY)
+	key := fmt.Sprintf("%s%s", WELCOMEBOT_CHANNEL_WELCOME_KEY, args.ChannelId)
 	data, appErr := p.API.KVGet(key)
 	if appErr != nil {
 		return p.responsef("error occured while retrieving the welcome message for the chanel: `%s`", appErr)
@@ -152,7 +152,7 @@ func (p *Plugin) executeCommandGetWelcome(args *model.CommandArgs) *model.Comman
 }
 
 func (p *Plugin) executeCommandDeleteWelcome(args *model.CommandArgs) *model.CommandResponse {
-	key := fmt.Sprintf("%s%s", args.ChannelId, WELCOMEBOT_CHANNEL_WELCOME_KEY)
+	key := fmt.Sprintf("%s%s", WELCOMEBOT_CHANNEL_WELCOME_KEY, args.ChannelId)
 	data, appErr := p.API.KVGet(key)
 
 	if appErr != nil {

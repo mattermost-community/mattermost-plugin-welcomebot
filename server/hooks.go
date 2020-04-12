@@ -38,7 +38,7 @@ func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.Ch
 		return
 	}
 
-	key := fmt.Sprintf("%s%s", channelMember.ChannelId, WELCOMEBOT_CHANNEL_WELCOME_KEY)
+	key := fmt.Sprintf("%s%s", WELCOMEBOT_CHANNEL_WELCOME_KEY, channelMember.ChannelId)
 	data, appErr := p.API.KVGet(key)
 	if appErr != nil {
 		mlog.Error(
