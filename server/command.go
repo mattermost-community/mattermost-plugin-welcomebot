@@ -27,13 +27,13 @@ func getCommand() *model.Command {
 	}
 }
 
-func (p *Plugin) responsef(format string, args ...interface{}) *model.CommandResponse {
-	return &model.CommandResponse{
-		ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
-		Username:     p.botUserID,
-		Text:         fmt.Sprintf(format, args...),
-		Type:         model.POST_DEFAULT,
+func (p *Plugin) postCommandResponse(args *model.CommandArgs, text string, textArgs ...interface{}) {
+	post := &model.Post{
+		UserId:    p.botUserID,
+		ChannelId: args.ChannelId,
+		Message:   fmt.Sprintf(text, textArgs...),
 	}
+	_ = p.API.SendEphemeralPost(args.UserId, post)
 }
 
 func (p *Plugin) hasSysadminRole(userId string) (bool, error) {
@@ -47,39 +47,40 @@ func (p *Plugin) hasSysadminRole(userId string) (bool, error) {
 	return true, nil
 }
 
-func (p *Plugin) validateCommand(action string, parameters []string) *model.CommandResponse {
+func (p *Plugin) validateCommand(action string, parameters []string) string {
 	switch action {
 	case "preview":
 		if len(parameters) != 1 {
-			return p.responsef("Please specify a team, for which preview should be made.")
+			return "Please specify a team, for which preview should be made."
 		}
 	case "list":
 		if len(parameters) > 0 {
-			return p.responsef("List command does not accept any extra parameters")
+			return "List command does not accept any extra parameters"
 		}
 	case "set_channel_welcome":
 		if len(parameters) == 0 {
-			return p.responsef("`set_channel_welcome` command requires the message to be provided")
+			return "`set_channel_welcome` command requires the message to be provided"
 		}
 	case "get_channel_welcome":
 		if len(parameters) > 0 {
-			return p.responsef("`get_channel_welcome` command does not accept any extra parameters")
+			return "`get_channel_welcome` command does not accept any extra parameters"
 		}
 	case "delete_channel_welcome":
 		if len(parameters) > 0 {
-			return p.responsef("`delete_channel_welcome` command does not accept any extra parameters")
+			return "`delete_channel_welcome` command does not accept any extra parameters"
 		}
 	}
 
-	return nil
+	return ""
 }
 
-func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs) *model.CommandResponse {
+func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs) {
 	found := false
 	for _, message := range p.getWelcomeMessages() {
 		if message.TeamName == teamName {
 			if err := p.previewWelcomeMessage(teamName, args, *message); err != nil {
-				return p.responsef("error occured while processing greeting for team `%s`: `%s`", teamName, err)
+				p.postCommandResponse(args, "error occured while processing greeting for team `%s`: `%s`", teamName, err)
+				return
 			}
 
 			found = true
@@ -87,17 +88,18 @@ func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs)
 	}
 
 	if !found {
-		return p.responsef("team `%s` has not been found", teamName)
+		p.postCommandResponse(args, "team `%s` has not been found", teamName)
 	}
 
-	return &model.CommandResponse{}
+	return
 }
 
-func (p *Plugin) executeCommandList(args *model.CommandArgs) *model.CommandResponse {
+func (p *Plugin) executeCommandList(args *model.CommandArgs) {
 	wecomeMessages := p.getWelcomeMessages()
 
 	if len(wecomeMessages) == 0 {
-		return p.responsef("There are no welcome messages defined")
+		p.postCommandResponse(args, "There are no welcome messages defined")
+		return
 	}
 
 	// Deduplicate entries
@@ -111,17 +113,20 @@ func (p *Plugin) executeCommandList(args *model.CommandArgs) *model.CommandRespo
 	for team := range teams {
 		str.WriteString(fmt.Sprintf("\n * %s", team))
 	}
-	return p.responsef(str.String())
+	p.postCommandResponse(args, str.String())
+	return
 }
 
-func (p *Plugin) executeCommandSetWelcome(args *model.CommandArgs) *model.CommandResponse {
+func (p *Plugin) executeCommandSetWelcome(args *model.CommandArgs) {
 	channelInfo, appErr := p.API.GetChannel(args.ChannelId)
 	if appErr != nil {
-		return p.responsef("error occured while checking the type of the chanelId `%s`: `%s`", args.ChannelId, appErr)
+		p.postCommandResponse(args, "error occured while checking the type of the chanelId `%s`: `%s`", args.ChannelId, appErr)
+		return
 	}
 
 	if channelInfo.Type == model.CHANNEL_PRIVATE {
-		return p.responsef("welcome messages are not supported for direct channels")
+		p.postCommandResponse(args, "welcome messages are not supported for direct channels")
+		return
 	}
 
 	// strings.Fields will consume ALL whitespace, so plain re-joining of the
@@ -131,43 +136,52 @@ func (p *Plugin) executeCommandSetWelcome(args *model.CommandArgs) *model.Comman
 
 	key := fmt.Sprintf("%s%s", WELCOMEBOT_CHANNEL_WELCOME_KEY, args.ChannelId)
 	if appErr := p.API.KVSet(key, []byte(message)); appErr != nil {
-		return p.responsef("error occured while storing the welcome message for the chanel: `%s`", appErr)
+		p.postCommandResponse(args, "error occured while storing the welcome message for the chanel: `%s`", appErr)
+		return
 	}
 
-	return p.responsef("stored the welcome message:\n%s", message)
+	p.postCommandResponse(args, "stored the welcome message:\n%s", message)
+	return
 }
 
-func (p *Plugin) executeCommandGetWelcome(args *model.CommandArgs) *model.CommandResponse {
+func (p *Plugin) executeCommandGetWelcome(args *model.CommandArgs) {
 	key := fmt.Sprintf("%s%s", WELCOMEBOT_CHANNEL_WELCOME_KEY, args.ChannelId)
 	data, appErr := p.API.KVGet(key)
 	if appErr != nil {
-		return p.responsef("error occured while retrieving the welcome message for the chanel: `%s`", appErr)
+		p.postCommandResponse(args, "error occured while retrieving the welcome message for the chanel: `%s`", appErr)
+		return
 	}
 
 	if data == nil {
-		return p.responsef("welcome message has not been set yet")
+		p.postCommandResponse(args, "welcome message has not been set yet")
+		return
 	}
 
-	return p.responsef("Welcome message is:\n%s", string(data))
+	p.postCommandResponse(args, "Welcome message is:\n%s", string(data))
+	return
 }
 
-func (p *Plugin) executeCommandDeleteWelcome(args *model.CommandArgs) *model.CommandResponse {
+func (p *Plugin) executeCommandDeleteWelcome(args *model.CommandArgs) {
 	key := fmt.Sprintf("%s%s", WELCOMEBOT_CHANNEL_WELCOME_KEY, args.ChannelId)
 	data, appErr := p.API.KVGet(key)
 
 	if appErr != nil {
-		return p.responsef("error occured while retrieving the welcome message for the chanel: `%s`", appErr)
+		p.postCommandResponse(args, "error occured while retrieving the welcome message for the chanel: `%s`", appErr)
+		return
 	}
 
 	if data == nil {
-		return p.responsef("welcome message has not been set yet")
+		p.postCommandResponse(args, "welcome message has not been set yet")
+		return
 	}
 
 	if appErr := p.API.KVDelete(key); appErr != nil {
-		return p.responsef("error occured while deleting the welcome message for the chanel: `%s`", appErr)
+		p.postCommandResponse(args, "error occured while deleting the welcome message for the chanel: `%s`", appErr)
+		return
 	}
 
-	return p.responsef("welcome message has been deleted")
+	p.postCommandResponse(args, "welcome message has been deleted")
+	return
 }
 
 func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
@@ -186,36 +200,46 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 		return &model.CommandResponse{}, nil
 	}
 
-	if response := p.validateCommand(action, parameters); response != nil {
-		return response, nil
+	if response := p.validateCommand(action, parameters); response != "" {
+		p.postCommandResponse(args, response)
+		return &model.CommandResponse{}, nil
 	}
 
 	isSysadmin, err := p.hasSysadminRole(args.UserId)
 	if err != nil {
-		return p.responsef("authorization failed: %s", err), nil
+		p.postCommandResponse(args, "authorization failed: %s", err)
+		return &model.CommandResponse{}, nil
 	}
 	if !isSysadmin {
-		return p.responsef("/welcomebot commands can only be executed by the user with system admin role"), nil
+		p.postCommandResponse(args, "/welcomebot commands can only be executed by the user with system admin role")
+		return &model.CommandResponse{}, nil
 	}
 
 	switch action {
 	case "preview":
 		teamName := parameters[0]
-		return p.executeCommandPreview(teamName, args), nil
+		p.executeCommandPreview(teamName, args)
+		return &model.CommandResponse{}, nil
 	case "list":
-		return p.executeCommandList(args), nil
+		p.executeCommandList(args)
+		return &model.CommandResponse{}, nil
 	case "set_channel_welcome":
-		return p.executeCommandSetWelcome(args), nil
+		p.executeCommandSetWelcome(args)
+		return &model.CommandResponse{}, nil
 	case "get_channel_welcome":
-		return p.executeCommandGetWelcome(args), nil
+		p.executeCommandGetWelcome(args)
+		return &model.CommandResponse{}, nil
 	case "delete_channel_welcome":
-		return p.executeCommandDeleteWelcome(args), nil
+		p.executeCommandDeleteWelcome(args)
+		return &model.CommandResponse{}, nil
 	case "help":
 		fallthrough
 	case "":
 		text := "###### Mattermost welcomebot Plugin - Slash Command Help\n" + strings.Replace(COMMAND_HELP, "|", "`", -1)
-		return p.responsef(text), nil
+		p.postCommandResponse(args, text)
+		return &model.CommandResponse{}, nil
 	}
 
-	return p.responsef("Unknown action %v", action), nil
+	p.postCommandResponse(args, "Unknown action %v", action)
+	return &model.CommandResponse{}, nil
 }
