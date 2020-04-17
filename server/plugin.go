@@ -12,6 +12,8 @@ const (
 	botUsername    = "welcomebot"
 	botDisplayName = "Welcomebot"
 	botDescription = "A bot account created by the Welcomebot plugin."
+
+	WELCOMEBOT_CHANNEL_WELCOME_KEY = "chanmsg_"
 )
 
 // Plugin represents the welcome bot plugin

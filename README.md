@@ -1,5 +1,8 @@
 # Welcome Bot Plugin ![CircleCI branch](https://img.shields.io/circleci/project/github/mattermost/mattermost-plugin-welcomebot/master.svg)
 
+**Maintainer:** [@jfrerich](https://github.com/jfrerich)
+**Co-Maintainer:** [@iomodo](https://github.com/iomodo)
+
 Use this plugin to improve onboarding and HR processes. It adds a Welcome Bot that helps add new team members to channels.
 
 ![image](https://user-images.githubusercontent.com/13119842/58736467-fd226400-83cb-11e9-827b-6bbe33d062ab.png)
@@ -58,13 +61,21 @@ where
 - **TeamName**: The team for which the Welcome Bot sends a message for. Must be the team handle used in the URL, in lowercase. For example, in the following URL the **TeamName** value is `my-team`: https://example.com/my-team/channels/my-channel
 - **DelayInSeconds**: The number of seconds after joining a team that the user receives a welcome message.
 - **Message**: The message posted to the user.
-- (Optional) **AttachmentMessage**: Message text in attachment containing user action buttons. 
+- (Optional) **AttachmentMessage**: Message text in attachment containing user action buttons.
 - (Optional) **Actions**: Use this to add new team members to channels automatically or based on which action button they pressed.
     - **ActionType**: One of `button` or `automatic`. When `button`: enables uses to select which types of channels they want to join. When `automatic`: the user is automatically added to the specified channels.
     - **ActionDisplayName**: Sets the display name for the user action buttons.
     - **ActionName**: Sets the action name used by the plugin to identify which action is taken by a user.
     - **ActionSuccessfulMessage**: Message posted after the user takes this action and joins the specified channels.
     - **ChannelsAddedTo**: List of channel names the user is added to. Must be the channel handle used in the URL, in lowercase. For example, in the following URL the **channel name** value is `my-channel`: https://example.com/my-team/channels/my-channel
+
+The preview of the configured messages can be done via bot commands:
+* `/welcomebot help` - show a short usage information
+* `/welcomebot list` - lists the teams for which greetings were defined
+* `/welcomebot preview [team-name]` - sends ephemeral messages to the user calling the command, with the preview of the welcome message[s] for the given team name and the user that requested the preview
+* `/welcomebot set_channel_welcome` - sets the given text as current's channel welcome message
+* `/welcomebot get_channel_welcome` - gets the current's channel welcome message
+* `/welcomebot delete_channel_welcome` - deletes the current's channel welcome message
 
 ## Example
 
@@ -150,7 +161,7 @@ To accomplish the above, you can specify the following configuration in your con
                     "##### I've added you to a few channels to get you started:",
                     "",
                     "~escalation-process - To review the DevSecOps escalation process",
-                    "~incidents - To collaborate and resolve seucrity incidents",
+                    "~incidents - To collaborate and resolve seucrity incidents"
                 ],
                 "Actions" : [
                     {
