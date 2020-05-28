@@ -9,7 +9,7 @@ import (
 	"github.com/mattermost/mattermost-server/v5/model"
 )
 
-const COMMAND_HELP = `* |/welcomebot preview [team-name] [user-name]| - preview the welcome message for the given team name. The current user's username will be used to render the template.
+const COMMAND_HELP = `* |/welcomebot preview [team-name] | - preview the welcome message for the given team name. The current user's username will be used to render the template.
 * |/welcomebot list| - list the teams for which welcome messages were defined
 * |/welcomebot set_channel_welcome [welcome-message]| - set the welcome message for the given channel. Direct channels are not supported.
 * |/welcomebot get_channel_welcome| - print the welcome message set for the given channel (if any)
