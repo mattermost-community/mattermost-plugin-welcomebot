@@ -151,7 +151,13 @@ func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMes
 	if len(configMessage.AttachmentMessage) > 0 || len(actionButtons) > 0 {
 		tmpAtch, _ := template.New("AttachmentResponse").Parse(strings.Join(configMessage.AttachmentMessage, "\n"))
 		var attachMessage bytes.Buffer
-		_ = tmpAtch.Execute(&attachMessage, messageTemplate)
+		err := tmpAtch.Execute(&attachMessage, messageTemplate)
+		if err != nil {
+			p.API.LogError(
+				"Failed to execute message template",
+				"err", err.Error(),
+			)
+		}
 
 		sa1 := &model.SlackAttachment{
 			Text: attachMessage.String(),
@@ -198,7 +204,13 @@ func (p *Plugin) processActionMessage(messageTemplate MessageTemplate, action *A
 
 	tmpMsg, _ := template.New("Response").Parse(strings.Join(configMessageAction.ActionSuccessfulMessage, "\n"))
 	var message bytes.Buffer
-	_ = tmpMsg.Execute(&message, messageTemplate)
+	err := tmpMsg.Execute(&message, messageTemplate)
+	if err != nil {
+		p.API.LogError(
+			"Failed to execute message template",
+			"err", err.Error(),
+		)
+	}
 
 	post := &model.Post{
 		Message:   message.String(),
