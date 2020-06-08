@@ -17,8 +17,8 @@ func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	mattermostUserId := r.Header.Get("Mattermost-User-Id")
-	if mattermostUserId == "" || mattermostUserId != action.Context.UserID {
+	mattermostUserID := r.Header.Get("Mattermost-User-Id")
+	if mattermostUserID == "" || mattermostUserID != action.Context.UserID {
 		p.API.LogError("http request not authenticated: no Mattermost-User-Id")
 		http.Error(w, "not authenticated", http.StatusUnauthorized)
 		return
@@ -81,7 +81,7 @@ func (p *Plugin) encodeEphemeralMessage(w http.ResponseWriter, message string) {
 		EphemeralText: message,
 	}
 
-	if _, err := w.Write([]byte(resp.ToJson())); err != nil {
+	if _, err := w.Write(resp.ToJson()); err != nil {
 		p.API.LogWarn("failed to write PostActionIntegrationResponse")
 	}
 }

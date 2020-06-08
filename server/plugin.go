@@ -13,7 +13,7 @@ const (
 	botDisplayName = "Welcomebot"
 	botDescription = "A bot account created by the Welcomebot plugin."
 
-	WELCOMEBOT_CHANNEL_WELCOME_KEY = "chanmsg_"
+	welcomebotChannelWelcomeKey = "chanmsg_"
 )
 
 // Plugin represents the welcome bot plugin
@@ -39,7 +39,10 @@ func (p *Plugin) OnActivate() error {
 	}
 	p.botUserID = botUserID
 
-	p.API.RegisterCommand(getCommand())
+	err := p.API.RegisterCommand(getCommand())
+	if err != nil {
+		return errors.Wrap(err, "failed to register command")
+	}
 
 	return nil
 }

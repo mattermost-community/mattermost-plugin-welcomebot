@@ -57,13 +57,13 @@ func (p *Plugin) getSiteURL() string {
 	return *config.ServiceSettings.SiteURL
 }
 
-func (p *Plugin) newSampleMessageTemplate(teamName, userId string) (*MessageTemplate, error) {
+func (p *Plugin) newSampleMessageTemplate(teamName, userID string) (*MessageTemplate, error) {
 	data := &MessageTemplate{}
 	var err *model.AppError
 
-	if data.User, err = p.API.GetUser(userId); err != nil {
-		p.API.LogError("failed to query user", "user_id", userId, "err", err)
-		return nil, fmt.Errorf("failed to query user %s: %w", userId, err)
+	if data.User, err = p.API.GetUser(userID); err != nil {
+		p.API.LogError("failed to query user", "user_id", userID, "err", err)
+		return nil, fmt.Errorf("failed to query user %s: %w", userID, err)
 	}
 
 	if data.Team, err = p.API.GetTeamByName(teamName); err != nil {
@@ -125,7 +125,7 @@ func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMes
 						"team_id": messageTemplate.Team.Id,
 						"user_id": messageTemplate.User.Id,
 					},
-					URL: fmt.Sprintf("%v/plugins/%v/addchannels", p.getSiteURL(), manifest.Id),
+					URL: fmt.Sprintf("%v/plugins/%v/addchannels", p.getSiteURL(), manifest.ID),
 				},
 			}
 
@@ -135,7 +135,7 @@ func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMes
 
 	tmpMsg, _ := template.New("Response").Parse(strings.Join(configMessage.Message, "\n"))
 	var message bytes.Buffer
-	tmpMsg.Execute(&message, messageTemplate)
+	_ = tmpMsg.Execute(&message, messageTemplate)
 
 	post := &model.Post{
 		Message: message.String(),
@@ -145,7 +145,7 @@ func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMes
 	if len(configMessage.AttachmentMessage) > 0 || len(actionButtons) > 0 {
 		tmpAtch, _ := template.New("AttachmentResponse").Parse(strings.Join(configMessage.AttachmentMessage, "\n"))
 		var attachMessage bytes.Buffer
-		tmpAtch.Execute(&attachMessage, messageTemplate)
+		_ = tmpAtch.Execute(&attachMessage, messageTemplate)
 
 		sa1 := &model.SlackAttachment{
 			Text: attachMessage.String(),
@@ -192,7 +192,7 @@ func (p *Plugin) processActionMessage(messageTemplate MessageTemplate, action *A
 
 	tmpMsg, _ := template.New("Response").Parse(strings.Join(configMessageAction.ActionSuccessfulMessage, "\n"))
 	var message bytes.Buffer
-	tmpMsg.Execute(&message, messageTemplate)
+	_ = tmpMsg.Execute(&message, messageTemplate)
 
 	post := &model.Post{
 		Message:   message.String(),

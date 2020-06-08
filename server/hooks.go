@@ -30,7 +30,7 @@ func (p *Plugin) UserHasJoinedTeam(c *plugin.Context, teamMember *model.TeamMemb
 func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.ChannelMember, _ *model.User) {
 	if channelInfo, appErr := p.API.GetChannel(channelMember.ChannelId); appErr != nil {
 		mlog.Error(
-			"error occured while checking the type of the chanel",
+			"error occurred while checking the type of the chanel",
 			mlog.String("channelId", channelMember.ChannelId),
 			mlog.Err(appErr),
 		)
@@ -39,11 +39,11 @@ func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.Ch
 		return
 	}
 
-	key := fmt.Sprintf("%s%s", WELCOMEBOT_CHANNEL_WELCOME_KEY, channelMember.ChannelId)
+	key := fmt.Sprintf("%s%s", welcomebotChannelWelcomeKey, channelMember.ChannelId)
 	data, appErr := p.API.KVGet(key)
 	if appErr != nil {
 		mlog.Error(
-			"error occured while retrieving the welcome message",
+			"error occurred while retrieving the welcome message",
 			mlog.String("channelId", channelMember.ChannelId),
 			mlog.Err(appErr),
 		)
@@ -58,7 +58,7 @@ func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.Ch
 	dmChannel, err := p.API.GetDirectChannel(channelMember.UserId, p.botUserID)
 	if err != nil {
 		mlog.Error(
-			"error occured while creating direct channel to the user",
+			"error occurred while creating direct channel to the user",
 			mlog.String("UserId", channelMember.UserId),
 			mlog.Err(err),
 		)
