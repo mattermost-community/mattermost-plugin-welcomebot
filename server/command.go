@@ -9,12 +9,21 @@ import (
 	"github.com/mattermost/mattermost-server/v5/model"
 )
 
-const COMMAND_HELP = `* |/welcomebot preview [team-name] | - preview the welcome message for the given team name. The current user's username will be used to render the template.
+const commandHelp = `* |/welcomebot preview [team-name] | - preview the welcome message for the given team name. The current user's username will be used to render the template.
 * |/welcomebot list| - list the teams for which welcome messages were defined
 * |/welcomebot set_channel_welcome [welcome-message]| - set the welcome message for the given channel. Direct channels are not supported.
 * |/welcomebot get_channel_welcome| - print the welcome message set for the given channel (if any)
 * |/welcomebot delete_channel_welcome| - delete the welcome message for the given channel (if any)
 `
+
+const (
+	commandTriggerPreview              = "preview"
+	commandTriggerList                 = "list"
+	commandTriggerSetChannelWelcome    = "set_channel_welcome"
+	commandTriggerGetChannelWelcome    = "get_channel_welcome"
+	commandTriggerDeleteChannelWelcome = "delete_channel_welcome"
+	commandTriggerHelp                 = "help"
+)
 
 func getCommand() *model.Command {
 	return &model.Command{
@@ -36,8 +45,8 @@ func (p *Plugin) postCommandResponse(args *model.CommandArgs, text string, textA
 	_ = p.API.SendEphemeralPost(args.UserId, post)
 }
 
-func (p *Plugin) hasSysadminRole(userId string) (bool, error) {
-	user, appErr := p.API.GetUser(userId)
+func (p *Plugin) hasSysadminRole(userID string) (bool, error) {
+	user, appErr := p.API.GetUser(userID)
 	if appErr != nil {
 		return false, appErr
 	}
@@ -49,23 +58,23 @@ func (p *Plugin) hasSysadminRole(userId string) (bool, error) {
 
 func (p *Plugin) validateCommand(action string, parameters []string) string {
 	switch action {
-	case "preview":
+	case commandTriggerPreview:
 		if len(parameters) != 1 {
 			return "Please specify a team, for which preview should be made."
 		}
-	case "list":
+	case commandTriggerList:
 		if len(parameters) > 0 {
 			return "List command does not accept any extra parameters"
 		}
-	case "set_channel_welcome":
+	case commandTriggerSetChannelWelcome:
 		if len(parameters) == 0 {
 			return "`set_channel_welcome` command requires the message to be provided"
 		}
-	case "get_channel_welcome":
+	case commandTriggerGetChannelWelcome:
 		if len(parameters) > 0 {
 			return "`get_channel_welcome` command does not accept any extra parameters"
 		}
-	case "delete_channel_welcome":
+	case commandTriggerDeleteChannelWelcome:
 		if len(parameters) > 0 {
 			return "`delete_channel_welcome` command does not accept any extra parameters"
 		}
@@ -79,7 +88,7 @@ func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs)
 	for _, message := range p.getWelcomeMessages() {
 		if message.TeamName == teamName {
 			if err := p.previewWelcomeMessage(teamName, args, *message); err != nil {
-				p.postCommandResponse(args, "error occured while processing greeting for team `%s`: `%s`", teamName, err)
+				p.postCommandResponse(args, "error occurred while processing greeting for team `%s`: `%s`", teamName, err)
 				return
 			}
 
@@ -90,8 +99,6 @@ func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs)
 	if !found {
 		p.postCommandResponse(args, "team `%s` has not been found", teamName)
 	}
-
-	return
 }
 
 func (p *Plugin) executeCommandList(args *model.CommandArgs) {
@@ -114,13 +121,12 @@ func (p *Plugin) executeCommandList(args *model.CommandArgs) {
 		str.WriteString(fmt.Sprintf("\n * %s", team))
 	}
 	p.postCommandResponse(args, str.String())
-	return
 }
 
 func (p *Plugin) executeCommandSetWelcome(args *model.CommandArgs) {
 	channelInfo, appErr := p.API.GetChannel(args.ChannelId)
 	if appErr != nil {
-		p.postCommandResponse(args, "error occured while checking the type of the chanelId `%s`: `%s`", args.ChannelId, appErr)
+		p.postCommandResponse(args, "error occurred while checking the type of the chanelId `%s`: `%s`", args.ChannelId, appErr)
 		return
 	}
 
@@ -134,21 +140,20 @@ func (p *Plugin) executeCommandSetWelcome(args *model.CommandArgs) {
 	message := strings.SplitN(args.Command, "set_channel_welcome", 2)[1]
 	message = strings.TrimSpace(message)
 
-	key := fmt.Sprintf("%s%s", WELCOMEBOT_CHANNEL_WELCOME_KEY, args.ChannelId)
+	key := fmt.Sprintf("%s%s", welcomebotChannelWelcomeKey, args.ChannelId)
 	if appErr := p.API.KVSet(key, []byte(message)); appErr != nil {
-		p.postCommandResponse(args, "error occured while storing the welcome message for the chanel: `%s`", appErr)
+		p.postCommandResponse(args, "error occurred while storing the welcome message for the chanel: `%s`", appErr)
 		return
 	}
 
 	p.postCommandResponse(args, "stored the welcome message:\n%s", message)
-	return
 }
 
 func (p *Plugin) executeCommandGetWelcome(args *model.CommandArgs) {
-	key := fmt.Sprintf("%s%s", WELCOMEBOT_CHANNEL_WELCOME_KEY, args.ChannelId)
+	key := fmt.Sprintf("%s%s", welcomebotChannelWelcomeKey, args.ChannelId)
 	data, appErr := p.API.KVGet(key)
 	if appErr != nil {
-		p.postCommandResponse(args, "error occured while retrieving the welcome message for the chanel: `%s`", appErr)
+		p.postCommandResponse(args, "error occurred while retrieving the welcome message for the chanel: `%s`", appErr)
 		return
 	}
 
@@ -158,15 +163,14 @@ func (p *Plugin) executeCommandGetWelcome(args *model.CommandArgs) {
 	}
 
 	p.postCommandResponse(args, "Welcome message is:\n%s", string(data))
-	return
 }
 
 func (p *Plugin) executeCommandDeleteWelcome(args *model.CommandArgs) {
-	key := fmt.Sprintf("%s%s", WELCOMEBOT_CHANNEL_WELCOME_KEY, args.ChannelId)
+	key := fmt.Sprintf("%s%s", welcomebotChannelWelcomeKey, args.ChannelId)
 	data, appErr := p.API.KVGet(key)
 
 	if appErr != nil {
-		p.postCommandResponse(args, "error occured while retrieving the welcome message for the chanel: `%s`", appErr)
+		p.postCommandResponse(args, "error occurred while retrieving the welcome message for the chanel: `%s`", appErr)
 		return
 	}
 
@@ -176,12 +180,11 @@ func (p *Plugin) executeCommandDeleteWelcome(args *model.CommandArgs) {
 	}
 
 	if appErr := p.API.KVDelete(key); appErr != nil {
-		p.postCommandResponse(args, "error occured while deleting the welcome message for the chanel: `%s`", appErr)
+		p.postCommandResponse(args, "error occurred while deleting the welcome message for the chanel: `%s`", appErr)
 		return
 	}
 
 	p.postCommandResponse(args, "welcome message has been deleted")
-	return
 }
 
 func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
@@ -216,26 +219,26 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 	}
 
 	switch action {
-	case "preview":
+	case commandTriggerPreview:
 		teamName := parameters[0]
 		p.executeCommandPreview(teamName, args)
 		return &model.CommandResponse{}, nil
-	case "list":
+	case commandTriggerList:
 		p.executeCommandList(args)
 		return &model.CommandResponse{}, nil
-	case "set_channel_welcome":
+	case commandTriggerSetChannelWelcome:
 		p.executeCommandSetWelcome(args)
 		return &model.CommandResponse{}, nil
-	case "get_channel_welcome":
+	case commandTriggerGetChannelWelcome:
 		p.executeCommandGetWelcome(args)
 		return &model.CommandResponse{}, nil
-	case "delete_channel_welcome":
+	case commandTriggerDeleteChannelWelcome:
 		p.executeCommandDeleteWelcome(args)
 		return &model.CommandResponse{}, nil
-	case "help":
+	case commandTriggerHelp:
 		fallthrough
 	case "":
-		text := "###### Mattermost welcomebot Plugin - Slash Command Help\n" + strings.Replace(COMMAND_HELP, "|", "`", -1)
+		text := "###### Mattermost welcomebot Plugin - Slash Command Help\n" + strings.Replace(commandHelp, "|", "`", -1)
 		p.postCommandResponse(args, text)
 		return &model.CommandResponse{}, nil
 	}
