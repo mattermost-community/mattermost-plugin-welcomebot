@@ -4,6 +4,7 @@
   "description": "This plugin adds a WelcomeBot that helps add new users to channels.",
   "homepage_url": "https://github.com/mattermost/mattermost-plugin-welcomebot",
   "support_url": "https://github.com/mattermost/mattermost-plugin-welcomebot/issues",
+  "release_notes_url": "https://github.com/mattermost/mattermost-plugin-welcomebot/releases/tag/v1.2.0",
   "version": "1.2.0",
   "min_server_version": "5.12.0",
   "server": {
