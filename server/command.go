@@ -238,7 +238,7 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 	case commandTriggerHelp:
 		fallthrough
 	case "":
-		text := "###### Mattermost welcomebot Plugin - Slash Command Help\n" + strings.Replace(commandHelp, "|", "`", -1)
+		text := "###### Mattermost welcomebot Plugin - Slash Command Help\n" + strings.ReplaceAll(commandHelp, "|", "`")
 		p.postCommandResponse(args, text)
 		return &model.CommandResponse{}, nil
 	}
