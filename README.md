@@ -74,7 +74,7 @@ where
     - **ActionSuccessfulMessage**: Message posted after the user takes this action and joins the specified channels.
     - **ChannelsAddedTo**: List of channel names the user is added to. Must be the channel handle used in the URL, in lowercase. For example, in the following URL the **channel name** value is `my-channel`: https://example.com/my-team/channels/my-channel
 
-The preview of the configured messages can be done via bot commands:
+The preview of the configured messages as well as creating channel welcome message can be done via bot commands:
 * `/welcomebot help` - show a short usage information
 * `/welcomebot list` - lists the teams for which greetings were defined
 * `/welcomebot preview [team-name]` - sends ephemeral messages to the user calling the command, with the preview of the welcome message[s] for the given team name and the user that requested the preview
