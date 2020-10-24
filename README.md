@@ -96,93 +96,93 @@ Moreover, those who join the DevSecOps team should automatically be added to Esc
 To accomplish the above, you can specify the following configuration in your config.json file.
 
 ```
-"Plugins": {
-    "com.mattermost.welcomebot": {
-        "WelcomeMessages": [
-            {
-                "TeamName": "staff",
-                "DelayInSeconds": 5,
-                "Message": [
-                    "### Welcome {{.UserDisplayName}} to the Staff {{.Team.DisplayName}} team!",
-                    "",
-                    "If you have any questions about your account, please message your @system-admin.",
-                    "",
-                    "For feedback about the Mattermost app, please share in the ~mattermost channel."
-                ]
-            },
-            {
-                "TeamName": "staff",
-                "DelayInSeconds": 10,
-                "AttachmentMessage": [
-                    "Let's get started by adding you to key channels! What is your role in the company?"
-                ],
-                "Actions" : [
+        "Plugins": {
+            "com.mattermost.welcomebot": {
+                "WelcomeMessages": [
                     {
-                        "ActionType": "button",
-                        "ActionDisplayName": "Developer",
-                        "ActionName": "developer-action",
-                        "ChannelsAddedTo": ["bugs", "jira-tasks", "sprint-planning"],
-                        "ActionSuccessfulMessage": [
-                            "### Awesome! I have added you to the following developer channels:",
-                            "~bugs - To help investigate or report bugs",
-                            "~jira-tasks - To stay updated on Jira tasks",
-                            "~sprint-planning - To plan and manage your team's Jira sprint"
+                        "TeamName": "staff",
+                        "DelayInSeconds": 5,
+                        "Message": [
+                            "### Welcome {{.UserDisplayName}} to the Staff {{.Team.DisplayName}} team!",
+                            "",
+                            "If you have any questions about your account, please message your @system-admin.",
+                            "",
+                            "For feedback about the Mattermost app, please share in the ~mattermost channel."
                         ]
                     },
                     {
-                        "ActionType": "button",
-                        "ActionDisplayName": "Account Manager",
-                        "ActionName": "account-manager-action",
-                        "ChannelsAddedTo": ["leads", "sales-discussion", "win-loss-analysis"],
-                        "ActionSuccessfulMessage": [
-                            "### Awesome! I have added you to the following developer channels:",
-                            "~leads - To stay updated on incoming leads",
-                            "~sales-discussion - To collaborate with your fellow account managers",
-                            "~win-loss-analysis - To conduct win-loss analysis of closed deals"
+                        "TeamName": "staff",
+                        "DelayInSeconds": 10,
+                        "AttachmentMessage": [
+                            "Let's get started by adding you to key channels! What is your role in the company?"
+                        ],
+                        "Actions" : [
+                            {
+                                "ActionType": "button",
+                                "ActionDisplayName": "Developer",
+                                "ActionName": "developer-action",
+                                "ChannelsAddedTo": ["bugs", "jira-tasks", "sprint-planning"],
+                                "ActionSuccessfulMessage": [
+                                    "### Awesome! I have added you to the following developer channels:",
+                                    "~bugs - To help investigate or report bugs",
+                                    "~jira-tasks - To stay updated on Jira tasks",
+                                    "~sprint-planning - To plan and manage your team's Jira sprint"
+                                ]
+                            },
+                            {
+                                "ActionType": "button",
+                                "ActionDisplayName": "Account Manager",
+                                "ActionName": "account-manager-action",
+                                "ChannelsAddedTo": ["leads", "sales-discussion", "win-loss-analysis"],
+                                "ActionSuccessfulMessage": [
+                                    "### Awesome! I have added you to the following developer channels:",
+                                    "~leads - To stay updated on incoming leads",
+                                    "~sales-discussion - To collaborate with your fellow account managers",
+                                    "~win-loss-analysis - To conduct win-loss analysis of closed deals"
+                                ]
+                            },
+                            {
+                                "ActionType": "button",
+                                "ActionDisplayName": "Support",
+                                "ActionName": "support-action",
+                                "ChannelsAddedTo": ["bugs", "customer-support", "leads"],
+                                "ActionSuccessfulMessage": [
+                                    "### Awesome! I have added you to the following developer channels:",
+                                    "~bugs - To help investigate or report bugs",
+                                    "~customer-support - To troubleshoot and resolve customer issues",
+                                    "~leads - To discuss potential accounts with other account managers"
+                                ]
+                            }
                         ]
                     },
                     {
-                        "ActionType": "button",
-                        "ActionDisplayName": "Support",
-                        "ActionName": "support-action",
-                        "ChannelsAddedTo": ["bugs", "customer-support", "leads"],
-                        "ActionSuccessfulMessage": [
-                            "### Awesome! I have added you to the following developer channels:",
-                            "~bugs - To help investigate or report bugs",
-                            "~customer-support - To troubleshoot and resolve customer issues",
-                            "~leads - To discuss potential accounts with other account managers"
+                        "TeamName": "devsecops",
+                        "DelayInSeconds": 5,
+                        "Message": [
+                            "### Welcome {{.UserDisplayName}} to the {{.Team.DisplayName}} team!",
+                            "",
+                            "**If you are not a member of the Security Meta Team and ended up on this team by accident, please report this issue and leave the team!**",
+                            "",
+                            "##### I've added you to a few channels to get you started:",
+                            "",
+                            "~escalation-process - To review the DevSecOps escalation process",
+                            "~incidents - To collaborate and resolve seucrity incidents"
+                        ],
+                        "Actions" : [
+                            {
+                                "ActionType": "automatic",
+                                "ChannelsAddedTo": ["escalation-process", "incidents"]
+                            }
                         ]
-                    }
-                ]
-            },
-            {
-                "TeamName": "devsecops",
-                "DelayInSeconds": 5,
-                "Message": [
-                    "### Welcome {{.UserDisplayName}} to the {{.Team.DisplayName}} team!",
-                    "",
-                    "**If you are not a member of the Security Meta Team and ended up on this team by accident, please report this issue and leave the team!**",
-                    "",
-                    "##### I've added you to a few channels to get you started:",
-                    "",
-                    "~escalation-process - To review the DevSecOps escalation process",
-                    "~incidents - To collaborate and resolve seucrity incidents"
-                ],
-                "Actions" : [
-                    {
-                        "ActionType": "automatic",
-                        "ChannelsAddedTo": ["escalation-process", "incidents"]
                     }
                 ]
             }
-        ]
-    }
-},
-"PluginStates": {
-    "com.mattermost.welcomebot": {
-        "Enable": true
-    }
-}
+        },
+        "PluginStates": {
+            "com.mattermost.welcomebot": {
+                "Enable": true
+            }
+        }
 ```
 
 We've used `{{.UserDisplayName}}` and `{{.Team.DisplayName}}` in the example `config.json`. You can insert any variable from the `MessageTemplate` struct, which has the following fields:
