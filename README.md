@@ -8,7 +8,7 @@
 **Maintainer:** [@jfrerich](https://github.com/jfrerich)
 **Co-Maintainer:** [@iomodo](https://github.com/iomodo)
 
-Use this plugin to improve onboarding and HR processes. It adds a Welcome Bot that helps add new team members to channels.
+Use this plugin to improve onboarding and HR processes. It adds a Welcome Bot that helps welcome users to team and/or channels as well as easily join channels based on selections.
 
 ![image](https://user-images.githubusercontent.com/13119842/58736467-fd226400-83cb-11e9-827b-6bbe33d062ab.png)
 
@@ -78,7 +78,7 @@ The preview of the configured messages as well as creating channel welcome messa
 * `/welcomebot help` - show a short usage information
 * `/welcomebot list` - lists the teams for which greetings were defined
 * `/welcomebot preview [team-name]` - sends ephemeral messages to the user calling the command, with the preview of the welcome message[s] for the given team name and the user that requested the preview
-* `/welcomebot set_channel_welcome` - sets the given text as current's channel welcome message
+* `/welcomebot set_channel_welcome [welcome-message]` - sets the given text as current's channel welcome message
 * `/welcomebot get_channel_welcome` - gets the current's channel welcome message
 * `/welcomebot delete_channel_welcome` - deletes the current's channel welcome message
 
