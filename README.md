@@ -28,37 +28,37 @@ Use this plugin to improve onboarding and HR processes. It adds a Welcome Bot th
 To configure the Welcome Bot, edit your `config.json` file with a message you want to send to a user in the following format:
 
 ```
-"Plugins": {
-    "com.mattermost.welcomebot": {
-        "WelcomeMessages": [
-            {
-                "TeamName": "your-team-name",
-                "DelayInSeconds": 3,
-                "Message": [
-                    "Your welcome message here. Each list item specifies one line in the message text."
-                ],
-                "AttachmentMessage": [
-                    "Attachment message containing user actions"
-                ],
-                "Actions" : [
+        "Plugins": {
+            "com.mattermost.welcomebot": {
+                "WelcomeMessages": [
                     {
-                        "ActionType": "button",
-                        "ActionDisplayName": "User Action",
-                        "ActionName": "action-name",
-                        "ActionSuccessfulMessage": [
-                            "Message posted after the user takes this action and joins channels specified by 'ChannelsAddedTo'."
+                        "TeamName": "your-team-name",
+                        "DelayInSeconds": 3,
+                        "Message": [
+                            "Your welcome message here. Each list item specifies one line in the message text."
                         ],
-                        "ChannelsAddedTo": ["channel-1", "channel-2"]
-                    },
-                    {
-                        "ActionType": "automatic",
-                        "ChannelsAddedTo": ["channel-3", "channel-4"]
+                        "AttachmentMessage": [
+                            "Attachment message containing user actions"
+                        ],
+                        "Actions" : [
+                            {
+                                "ActionType": "button",
+                                "ActionDisplayName": "User Action",
+                                "ActionName": "action-name",
+                                "ActionSuccessfulMessage": [
+                                    "Message posted after the user takes this action and joins channels specified by 'ChannelsAddedTo'."
+                                ],
+                                "ChannelsAddedTo": ["channel-1", "channel-2"]
+                            },
+                            {
+                                "ActionType": "automatic",
+                                "ChannelsAddedTo": ["channel-3", "channel-4"]
+                            }
+                        ]
                     }
                 ]
             }
-        ]
-    }
-},
+        },
 ```
 
 where
