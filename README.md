@@ -8,7 +8,7 @@
 **Maintainer:** [@jfrerich](https://github.com/jfrerich)
 **Co-Maintainer:** [@iomodo](https://github.com/iomodo)
 
-Use this plugin to improve onboarding and HR processes. It adds a Welcome Bot that helps welcome users to team and/or channels as well as easily join channels based on selections.
+Use this plugin to improve onboarding and HR processes. It adds a Welcome Bot that helps welcome users to teams and/or channels as well as easily join channels based on selections.
 
 ![image](https://user-images.githubusercontent.com/13119842/58736467-fd226400-83cb-11e9-827b-6bbe33d062ab.png)
 
@@ -74,7 +74,7 @@ where
     - **ActionSuccessfulMessage**: Message posted after the user takes this action and joins the specified channels.
     - **ChannelsAddedTo**: List of channel names the user is added to. Must be the channel handle used in the URL, in lowercase. For example, in the following URL the **channel name** value is `my-channel`: https://example.com/my-team/channels/my-channel
 
-The preview of the configured messages as well as creating channel welcome message can be done via bot commands:
+The preview of the configured messages, as well as the creation of a channel welcome message, can be done via bot commands:
 * `/welcomebot help` - show a short usage information
 * `/welcomebot list` - lists the teams for which greetings were defined
 * `/welcomebot preview [team-name]` - sends ephemeral messages to the user calling the command, with the preview of the welcome message[s] for the given team name and the user that requested the preview
@@ -93,7 +93,7 @@ Those who join the Staff team should be added to a set of channels based on thei
 
 Moreover, those who join the DevSecOps team should automatically be added to Escalation Process and Incidents channels.
 
-To accomplish the above, you can specify the following configuration in your config.json file.
+To accomplish the above, you can specify the following configuration in your `config.json` file.
 
 ```
         "Plugins": {
@@ -114,7 +114,7 @@ To accomplish the above, you can specify the following configuration in your con
                         "TeamName": "staff",
                         "DelayInSeconds": 10,
                         "AttachmentMessage": [
-                            "Let's get started by adding you to key channels! What is your role in the company?"
+                            "Let's get started by adding you to key channels! What's your role in the company?"
                         ],
                         "Actions" : [
                             {
@@ -123,7 +123,7 @@ To accomplish the above, you can specify the following configuration in your con
                                 "ActionName": "developer-action",
                                 "ChannelsAddedTo": ["bugs", "jira-tasks", "sprint-planning"],
                                 "ActionSuccessfulMessage": [
-                                    "### Awesome! I have added you to the following developer channels:",
+                                    "### Awesome! I've added you to the following developer channels:",
                                     "~bugs - To help investigate or report bugs",
                                     "~jira-tasks - To stay updated on Jira tasks",
                                     "~sprint-planning - To plan and manage your team's Jira sprint"
@@ -135,7 +135,7 @@ To accomplish the above, you can specify the following configuration in your con
                                 "ActionName": "account-manager-action",
                                 "ChannelsAddedTo": ["leads", "sales-discussion", "win-loss-analysis"],
                                 "ActionSuccessfulMessage": [
-                                    "### Awesome! I have added you to the following developer channels:",
+                                    "### Awesome! I've added you to the following developer channels:",
                                     "~leads - To stay updated on incoming leads",
                                     "~sales-discussion - To collaborate with your fellow account managers",
                                     "~win-loss-analysis - To conduct win-loss analysis of closed deals"
@@ -147,7 +147,7 @@ To accomplish the above, you can specify the following configuration in your con
                                 "ActionName": "support-action",
                                 "ChannelsAddedTo": ["bugs", "customer-support", "leads"],
                                 "ActionSuccessfulMessage": [
-                                    "### Awesome! I have added you to the following developer channels:",
+                                    "### Awesome! I've added you to the following developer channels:",
                                     "~bugs - To help investigate or report bugs",
                                     "~customer-support - To troubleshoot and resolve customer issues",
                                     "~leads - To discuss potential accounts with other account managers"
@@ -161,12 +161,12 @@ To accomplish the above, you can specify the following configuration in your con
                         "Message": [
                             "### Welcome {{.UserDisplayName}} to the {{.Team.DisplayName}} team!",
                             "",
-                            "**If you are not a member of the Security Meta Team and ended up on this team by accident, please report this issue and leave the team!**",
+                            "**If you're not a member of the Security Meta Team and ended up on this team by accident, please report this issue and leave the team!**",
                             "",
                             "##### I've added you to a few channels to get you started:",
                             "",
                             "~escalation-process - To review the DevSecOps escalation process",
-                            "~incidents - To collaborate and resolve seucrity incidents"
+                            "~incidents - To collaborate on and resolve security incidents"
                         ],
                         "Actions" : [
                             {
