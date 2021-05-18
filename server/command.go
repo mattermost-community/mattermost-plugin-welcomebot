@@ -33,6 +33,7 @@ func getCommand() *model.Command {
 		AutoComplete:     true,
 		AutoCompleteDesc: "Available commands: preview, help, list, set_channel_welcome, get_channel_welcome, delete_channel_welcome",
 		AutoCompleteHint: "[command]",
+		AutocompleteData: getAutocompleteData(),
 	}
 }
 
@@ -245,4 +246,26 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 
 	p.postCommandResponse(args, "Unknown action %v", action)
 	return &model.CommandResponse{}, nil
+}
+
+func getAutocompleteData() *model.AutocompleteData {
+	welcomebot := model.NewAutocompleteData("welcomebot", "[command]",
+		"Available commands: preview, help, list, set_channel_welcome, get_channel_welcome, delete_channel_welcome")
+
+	preview := model.NewAutocompleteData("preview", "[team-name]", "Preview the welcome message for the given team name")
+	welcomebot.AddCommand(preview)
+
+	list := model.NewAutocompleteData("list", "", "Lists team welcome messages")
+	welcomebot.AddCommand(list)
+
+	setChannelWelcome := model.NewAutocompleteData("set_channel_welcome", "[welcome-message]", "Set the welcome message for the channel")
+	welcomebot.AddCommand(setChannelWelcome)
+
+	getChannelWelcome := model.NewAutocompleteData("get_channel_welcome", "", "Print the welcome message set for the channel")
+	welcomebot.AddCommand(getChannelWelcome)
+
+	deleteChannelWelcome := model.NewAutocompleteData("delete_channel_welcome", "", "Delete the welcome message for the channel")
+	welcomebot.AddCommand(deleteChannelWelcome)
+
+	return welcomebot
 }
