@@ -4,6 +4,7 @@
   "description": "This plugin adds a WelcomeBot that helps add new users to channels.",
   "homepage_url": "https://github.com/mattermost/mattermost-plugin-welcomebot",
   "support_url": "https://github.com/mattermost/mattermost-plugin-welcomebot/issues",
+  "release_notes_url": "https://github.com/mattermost/mattermost-plugin-welcomebot/releases/tag/v1.2.0",
   "version": "1.3.0",
   "min_server_version": "5.12.0",
   "server": {
@@ -14,6 +15,6 @@
     }
   },
   "settings_schema": {
-      "header": "Configure this plugin directly in the config.json file. Learn more [in our documentation](https://github.com/mattermost/mattermost-plugin-welcomebot/blob/master/README.md).\n\nTo report an issue, make a suggestion or a contribution, [check the plugin repository](https://github.com/mattermost/mattermost-plugin-welcomebot)"
+      "header": "Configure this plugin directly in the config.json file. Learn more [in our documentation](https://github.com/mattermost/mattermost-plugin-welcomebot/blob/master/README.md).\n\n To report an issue, make a suggestion, or submit a contribution, [check the plugin repository](https://github.com/mattermost/mattermost-plugin-welcomebot)."
   }
 }

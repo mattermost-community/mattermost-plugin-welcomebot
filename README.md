@@ -8,7 +8,7 @@
 **Maintainer:** [@jfrerich](https://github.com/jfrerich)
 **Co-Maintainer:** [@iomodo](https://github.com/iomodo)
 
-Use this plugin to improve onboarding and HR processes. It adds a Welcome Bot that helps add new team members to channels.
+Use this plugin to improve onboarding and HR processes. It adds a Welcome Bot that helps welcome users to teams and/or channels as well as easily join channels based on selections.
 
 ![image](https://user-images.githubusercontent.com/13119842/58736467-fd226400-83cb-11e9-827b-6bbe33d062ab.png)
 
@@ -75,14 +75,15 @@ where
     - **ActionName**: Sets the action name used by the plugin to identify which action is taken by a user.
     - **ActionSuccessfulMessage**: Message posted after the user takes this action and joins the specified channels.
     - **ChannelsAddedTo**: List of channel names the user is added to. Must be the channel handle used in the URL, in lowercase. For example, in the following URL the **channel name** value is `my-channel`: https://example.com/my-team/channels/my-channel
+    - **ActionDirectMessagePost**: The post to send users when creating the bot direct message channel
 
-The preview of the configured messages can be done via bot commands:
-* `/welcomebot help` - show a short usage information
-* `/welcomebot list` - lists the teams for which greetings were defined
-* `/welcomebot preview [team-name]` - sends ephemeral messages to the user calling the command, with the preview of the welcome message[s] for the given team name and the user that requested the preview
-* `/welcomebot set_channel_welcome` - sets the given text as current's channel welcome message
-* `/welcomebot get_channel_welcome` - gets the current's channel welcome message
-* `/welcomebot delete_channel_welcome` - deletes the current's channel welcome message
+The preview of the configured messages, as well as the creation of a channel welcome message, can be done via bot commands:
+* `/welcomebot help` - Displays usage information.
+* `/welcomebot list` - Lists the teams for which greetings were defined.
+* `/welcomebot preview [team-name]` - Sends ephemeral messages to the user calling the command, with the preview of the welcome message[s] for the given team name and the user that requested the preview.
+* `/welcomebot set_channel_welcome [welcome-message]` - Sets the given text as current's channel welcome message.
+* `/welcomebot get_channel_welcome` - Gets the current channel's welcome message.
+* `/welcomebot delete_channel_welcome` - Deletes the current channel's welcome message.
 
 ## Example
 
@@ -95,96 +96,96 @@ Those who join the Staff team should be added to a set of channels based on thei
 
 Moreover, those who join the DevSecOps team should automatically be added to Escalation Process and Incidents channels.
 
-To accomplish the above, you can specify the following configuration in your config.json file.
+To accomplish the above, you can specify the following configuration in your `config.json` file.
 
 ```
-"Plugins": {
-    "com.mattermost.welcomebot": {
-        "WelcomeMessages": [
-            {
-                "TeamName": "staff",
-                "DelayInSeconds": 5,
-                "Message": [
-                    "### Welcome {{.UserDisplayName}} to the Staff {{.Team.DisplayName}} team!",
-                    "",
-                    "If you have any questions about your account, please message your @system-admin.",
-                    "",
-                    "For feedback about the Mattermost app, please share in the ~mattermost channel."
-                ]
-            },
-            {
-                "TeamName": "staff",
-                "DelayInSeconds": 10,
-                "AttachmentMessage": [
-                    "Let's get started by adding you to key channels! What is your role in the company?"
-                ],
-                "Actions" : [
+        "Plugins": {
+            "com.mattermost.welcomebot": {
+                "WelcomeMessages": [
                     {
-                        "ActionType": "button",
-                        "ActionDisplayName": "Developer",
-                        "ActionName": "developer-action",
-                        "ChannelsAddedTo": ["bugs", "jira-tasks", "sprint-planning"],
-                        "ActionSuccessfulMessage": [
-                            "### Awesome! I have added you to the following developer channels:",
-                            "~bugs - To help investigate or report bugs",
-                            "~jira-tasks - To stay updated on Jira tasks",
-                            "~sprint-planning - To plan and manage your team's Jira sprint"
+                        "TeamName": "staff",
+                        "DelayInSeconds": 5,
+                        "Message": [
+                            "### Welcome {{.UserDisplayName}} to the Staff {{.Team.DisplayName}} team!",
+                            "",
+                            "If you have any questions about your account, please message your @system-admin.",
+                            "",
+                            "For feedback about the Mattermost app, please share in the ~mattermost channel."
                         ]
                     },
                     {
-                        "ActionType": "button",
-                        "ActionDisplayName": "Account Manager",
-                        "ActionName": "account-manager-action",
-                        "ChannelsAddedTo": ["leads", "sales-discussion", "win-loss-analysis"],
-                        "ActionSuccessfulMessage": [
-                            "### Awesome! I have added you to the following developer channels:",
-                            "~leads - To stay updated on incoming leads",
-                            "~sales-discussion - To collaborate with your fellow account managers",
-                            "~win-loss-analysis - To conduct win-loss analysis of closed deals"
+                        "TeamName": "staff",
+                        "DelayInSeconds": 10,
+                        "AttachmentMessage": [
+                            "Let's get started by adding you to key channels! What's your role in the company?"
+                        ],
+                        "Actions" : [
+                            {
+                                "ActionType": "button",
+                                "ActionDisplayName": "Developer",
+                                "ActionName": "developer-action",
+                                "ChannelsAddedTo": ["bugs", "jira-tasks", "sprint-planning"],
+                                "ActionSuccessfulMessage": [
+                                    "### Awesome! I've added you to the following developer channels:",
+                                    "~bugs - To help investigate or report bugs",
+                                    "~jira-tasks - To stay updated on Jira tasks",
+                                    "~sprint-planning - To plan and manage your team's Jira sprint"
+                                ]
+                            },
+                            {
+                                "ActionType": "button",
+                                "ActionDisplayName": "Customer Engineer",
+                                "ActionName": "customer-engineer-action",
+                                "ChannelsAddedTo": ["leads", "sales-discussion", "win-loss-analysis"],
+                                "ActionSuccessfulMessage": [
+                                    "### Awesome! I've added you to the following developer channels:",
+                                    "~leads - To stay updated on incoming leads",
+                                    "~sales-discussion - To collaborate with your fellow Customer Engineers,
+                                    "~win-loss-analysis - To conduct win-loss analysis of closed deals"
+                                ]
+                            },
+                            {
+                                "ActionType": "button",
+                                "ActionDisplayName": "Support",
+                                "ActionName": "support-action",
+                                "ChannelsAddedTo": ["bugs", "customer-support", "leads"],
+                                "ActionSuccessfulMessage": [
+                                    "### Awesome! I've added you to the following developer channels:",
+                                    "~bugs - To help investigate or report bugs",
+                                    "~customer-support - To troubleshoot and resolve customer issues",
+                                    "~leads - To discuss potential accounts with other Customer Engineers"
+                                ]
+                            }
                         ]
                     },
                     {
-                        "ActionType": "button",
-                        "ActionDisplayName": "Support",
-                        "ActionName": "support-action",
-                        "ChannelsAddedTo": ["bugs", "customer-support", "leads"],
-                        "ActionSuccessfulMessage": [
-                            "### Awesome! I have added you to the following developer channels:",
-                            "~bugs - To help investigate or report bugs",
-                            "~customer-support - To troubleshoot and resolve customer issues",
-                            "~leads - To discuss potential accounts with other account managers"
+                        "TeamName": "devsecops",
+                        "DelayInSeconds": 5,
+                        "Message": [
+                            "### Welcome {{.UserDisplayName}} to the {{.Team.DisplayName}} team!",
+                            "",
+                            "**If you're not a member of the Security Meta Team and ended up on this team by accident, please report this issue and leave the team!**",
+                            "",
+                            "##### I've added you to a few channels to get you started:",
+                            "",
+                            "~escalation-process - To review the DevSecOps escalation process",
+                            "~incidents - To collaborate on and resolve security incidents"
+                        ],
+                        "Actions" : [
+                            {
+                                "ActionType": "automatic",
+                                "ChannelsAddedTo": ["escalation-process", "incidents"]
+                            }
                         ]
-                    }
-                ]
-            },
-            {
-                "TeamName": "devsecops",
-                "DelayInSeconds": 5,
-                "Message": [
-                    "### Welcome {{.UserDisplayName}} to the {{.Team.DisplayName}} team!",
-                    "",
-                    "**If you are not a member of the Security Meta Team and ended up on this team by accident, please report this issue and leave the team!**",
-                    "",
-                    "##### I've added you to a few channels to get you started:",
-                    "",
-                    "~escalation-process - To review the DevSecOps escalation process",
-                    "~incidents - To collaborate and resolve seucrity incidents"
-                ],
-                "Actions" : [
-                    {
-                        "ActionType": "automatic",
-                        "ChannelsAddedTo": ["escalation-process", "incidents"]
                     }
                 ]
             }
-        ]
-    }
-},
-"PluginStates": {
-    "com.mattermost.welcomebot": {
-        "Enable": true
-    }
-}
+        },
+        "PluginStates": {
+            "com.mattermost.welcomebot": {
+                "Enable": true
+            }
+        }
 ```
 
 We've used `{{.UserDisplayName}}` and `{{.Team.DisplayName}}` in the example `config.json`. You can insert any variable from the `MessageTemplate` struct, which has the following fields:
