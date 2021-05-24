@@ -45,14 +45,16 @@ To configure the Welcome Bot, edit your `config.json` file with a message you wa
                         "ActionType": "button",
                         "ActionDisplayName": "User Action",
                         "ActionName": "action-name",
+                        "ActionDirectMessagePost": "Message send to new direct messages",
                         "ActionSuccessfulMessage": [
                             "Message posted after the user takes this action and joins channels specified by 'ChannelsAddedTo'."
                         ],
-                        "ChannelsAddedTo": ["channel-1", "channel-2"]
+                        "ChannelsAddedTo": ["channel-1", "channel-2", "@example-bot"]
                     },
                     {
                         "ActionType": "automatic",
-                        "ChannelsAddedTo": ["channel-3", "channel-4"]
+                        "ActionDirectMessagePost": "Message send to new direct messages",
+                        "ChannelsAddedTo": ["channel-3", "channel-4", "@another-bot"]
                     }
                 ]
             }
