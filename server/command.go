@@ -253,7 +253,7 @@ func getAutocompleteData() *model.AutocompleteData {
 		"Available commands: preview, help, list, set_channel_welcome, get_channel_welcome, delete_channel_welcome")
 
 	preview := model.NewAutocompleteData("preview", "[team-name]", "Preview the welcome message for the given team name")
-	preview.AddTextArgument("Team Name to preview welcome message", "[team-name]", "")
+	preview.AddTextArgument("Team name to preview welcome message", "[team-name]", "")
 	welcomebot.AddCommand(preview)
 
 	list := model.NewAutocompleteData("list", "", "Lists team welcome messages")
