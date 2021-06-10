@@ -57,7 +57,7 @@ func (p *Plugin) getSiteURL() string {
 	return *config.ServiceSettings.SiteURL
 }
 
-func (p *Plugin) newSampleMessageTemplate(teamId, userID string) (*MessageTemplate, error) {
+func (p *Plugin) newSampleMessageTemplate(teamId string, userID string) (*MessageTemplate, error) {
 	data := &MessageTemplate{}
 	var err *model.AppError
 
