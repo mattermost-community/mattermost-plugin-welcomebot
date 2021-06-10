@@ -57,7 +57,7 @@ func (p *Plugin) getSiteURL() string {
 	return *config.ServiceSettings.SiteURL
 }
 
-func (p *Plugin) newSampleMessageTemplate(teamName, userID string) (*MessageTemplate, error) {
+func (p *Plugin) newSampleMessageTemplate(teamId, userID string) (*MessageTemplate, error) {
 	data := &MessageTemplate{}
 	var err *model.AppError
 
@@ -66,14 +66,14 @@ func (p *Plugin) newSampleMessageTemplate(teamName, userID string) (*MessageTemp
 		return nil, fmt.Errorf("failed to query user %s: %w", userID, err)
 	}
 
-	if data.Team, err = p.API.GetTeamByName(teamName); err != nil {
-		p.API.LogError("failed to query team", "team_name", teamName, "err", err)
-		return nil, fmt.Errorf("failed to query team %s: %w", teamName, err)
+	if data.Team, err = p.API.GetTeam(teamId); err != nil {
+		p.API.LogError("failed to query team", "team_id", teamId, "err", err)
+		return nil, fmt.Errorf("failed to query team %s: %w", teamId, err)
 	}
 
 	if data.Townsquare, err = p.API.GetChannelByName(data.Team.Id, "town-square", false); err != nil {
-		p.API.LogError("failed to query town-square", "team_name", teamName)
-		return nil, fmt.Errorf("failed to query town-square %s: %w", teamName, err)
+		p.API.LogError("failed to query town-square", "team_name", data.Team.Name)
+		return nil, fmt.Errorf("failed to query town-square %s: %w", data.Team.Name, err)
 	}
 
 	if data.DirectMessage, err = p.API.GetDirectChannel(data.User.Id, p.botUserID); err != nil {
@@ -86,8 +86,8 @@ func (p *Plugin) newSampleMessageTemplate(teamName, userID string) (*MessageTemp
 	return data, nil
 }
 
-func (p *Plugin) previewWelcomeMessage(teamName string, args *model.CommandArgs, configMessage ConfigMessage) error {
-	messageTemplate, err := p.newSampleMessageTemplate(teamName, args.UserId)
+func (p *Plugin) previewWelcomeMessage(args *model.CommandArgs, configMessage ConfigMessage) error {
+	messageTemplate, err := p.newSampleMessageTemplate(args.TeamId, args.UserId)
 	if err != nil {
 		return err
 	}
