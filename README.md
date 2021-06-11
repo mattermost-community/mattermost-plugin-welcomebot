@@ -32,7 +32,7 @@ To configure the Welcome Bot, edit your `config.json` file with a message you wa
             "com.mattermost.welcomebot": {
                 "WelcomeMessages": [
                     {
-                        "TeamName": "your-team-name",
+                        "TeamName": "your-team-name,your-second-team-name",
                         "DelayInSeconds": 3,
                         "Message": [
                             "Your welcome message here. Each list item specifies one line in the message text."
@@ -63,7 +63,7 @@ To configure the Welcome Bot, edit your `config.json` file with a message you wa
 
 where
 
-- **TeamName**: The team for which the Welcome Bot sends a message for. Must be the team handle used in the URL, in lowercase. For example, in the following URL the **TeamName** value is `my-team`: https://example.com/my-team/channels/my-channel
+- **TeamName**: The teams for which the Welcome Bot sends a message for. Must be the team handle used in the URL, in lowercase. For example, in the following URL the **TeamName** value is `my-team`: https://example.com/my-team/channels/my-channel . In case of multiple teams, ensure that the comma seperated fields dont have any white space between them. For example `"my-team,my-team-2"` is valid while `"my-team, my-team-2"` is not valid. 
 - **DelayInSeconds**: The number of seconds after joining a team that the user receives a welcome message.
 - **Message**: The message posted to the user.
 - (Optional) **AttachmentMessage**: Message text in attachment containing user action buttons.
@@ -100,7 +100,7 @@ To accomplish the above, you can specify the following configuration in your `co
             "com.mattermost.welcomebot": {
                 "WelcomeMessages": [
                     {
-                        "TeamName": "staff",
+                        "TeamName": "staff,devsecops",
                         "DelayInSeconds": 5,
                         "Message": [
                             "### Welcome {{.UserDisplayName}} to the Staff {{.Team.DisplayName}} team!",
@@ -111,7 +111,7 @@ To accomplish the above, you can specify the following configuration in your `co
                         ]
                     },
                     {
-                        "TeamName": "staff",
+                        "TeamName": "staff"
                         "DelayInSeconds": 10,
                         "AttachmentMessage": [
                             "Let's get started by adding you to key channels! What's your role in the company?"

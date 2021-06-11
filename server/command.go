@@ -84,10 +84,23 @@ func (p *Plugin) validateCommand(action string, parameters []string) string {
 	return ""
 }
 
+// contains checks if a string is present in a slice
+func contains(s []string, str string) bool {
+	for _, v := range s {
+		if v == str {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs) {
 	found := false
 	for _, message := range p.getWelcomeMessages() {
-		if message.TeamName == teamName {
+		// splits the string
+		teamNameSlice := strings.Split(message.TeamName, ",")
+		if contains(teamNameSlice, teamName) {
 			if err := p.previewWelcomeMessage(args, *message); err != nil {
 				p.postCommandResponse(args, "error occurred while processing greeting for team `%s`: `%s`", teamName, err)
 				return
@@ -113,7 +126,10 @@ func (p *Plugin) executeCommandList(args *model.CommandArgs) {
 	// Deduplicate entries
 	teams := make(map[string]struct{})
 	for _, message := range wecomeMessages {
-		teams[message.TeamName] = struct{}{}
+		teamNameSlice := strings.Split(message.TeamName, ",")
+		for _, tn := range teamNameSlice {
+			teams[tn] = struct{}{}
+		}
 	}
 
 	var str strings.Builder

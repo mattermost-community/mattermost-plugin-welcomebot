@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/mattermost/mattermost-server/v5/model"
 	"github.com/mattermost/mattermost-server/v5/plugin"
@@ -57,12 +58,15 @@ func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Req
 	switch r.URL.Path {
 	case "/addchannels":
 		for _, wm := range p.getWelcomeMessages() {
-			if data.Team.Name == wm.TeamName {
-				for _, ac := range wm.Actions {
-					if ac.ActionName == action.Context.Action {
-						p.processActionMessage(*data, action, *ac)
-						p.encodeEphemeralMessage(w, "")
-						return
+			teamNameSlice := strings.Split(wm.TeamName, ",")
+			for _, tn := range teamNameSlice {
+				if data.Team.Name == tn {
+					for _, ac := range wm.Actions {
+						if ac.ActionName == action.Context.Action {
+							p.processActionMessage(*data, action, *ac)
+							p.encodeEphemeralMessage(w, "")
+							return
+						}
 					}
 				}
 			}
