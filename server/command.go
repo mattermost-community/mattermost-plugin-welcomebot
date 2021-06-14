@@ -98,8 +98,11 @@ func contains(s []string, str string) bool {
 func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs) {
 	found := false
 	for _, message := range p.getWelcomeMessages() {
-		// splits the string
+		// splits the string and removes white spaces from underlying strings
 		teamNameSlice := strings.Split(message.TeamName, ",")
+		for i := range teamNameSlice {
+			teamNameSlice[i] = strings.TrimSpace(teamNameSlice[i])
+		}
 		if contains(teamNameSlice, teamName) {
 			if err := p.previewWelcomeMessage(args, *message); err != nil {
 				p.postCommandResponse(args, "error occurred while processing greeting for team `%s`: `%s`", teamName, err)

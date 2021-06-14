@@ -111,7 +111,7 @@ To accomplish the above, you can specify the following configuration in your `co
                         ]
                     },
                     {
-                        "TeamName": "staff"
+                        "TeamName": "staff",
                         "DelayInSeconds": 10,
                         "AttachmentMessage": [
                             "Let's get started by adding you to key channels! What's your role in the company?"
