@@ -118,6 +118,17 @@ func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs)
 	}
 }
 
+func (p *Plugin) hasChannelAdminRole(channelID string, userID string) (bool, error) {
+	channel, err := p.API.GetChannel(channelID)
+	if err != nil {
+		return false, err
+	}
+	if channel.CreatorId != userID {
+		return false, nil
+	}
+	return true, nil
+}
+
 func (p *Plugin) executeCommandList(args *model.CommandArgs) {
 	wecomeMessages := p.getWelcomeMessages()
 
@@ -228,14 +239,26 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 		return &model.CommandResponse{}, nil
 	}
 
-	isSysadmin, err := p.hasSysadminRole(args.UserId)
-	if err != nil {
-		p.postCommandResponse(args, "authorization failed: %s", err)
-		return &model.CommandResponse{}, nil
-	}
-	if !isSysadmin {
-		p.postCommandResponse(args, "/welcomebot commands can only be executed by the user with system admin role")
-		return &model.CommandResponse{}, nil
+	if action == commandTriggerSetChannelWelcome || action == commandTriggerGetChannelWelcome || action == commandTriggerDeleteChannelWelcome {
+		isChannelAdmin, err := p.hasChannelAdminRole(args.ChannelId, args.UserId)
+		if err != nil {
+			p.postCommandResponse(args, "authorization failed: %s", err)
+			return &model.CommandResponse{}, nil
+		}
+		if !isChannelAdmin {
+			p.postCommandResponse(args, "/%s commands can only be executed by the user with channel admin role", action)
+			return &model.CommandResponse{}, nil
+		}
+	} else {
+		isSysadmin, err := p.hasSysadminRole(args.UserId)
+		if err != nil {
+			p.postCommandResponse(args, "authorization failed: %s", err)
+			return &model.CommandResponse{}, nil
+		}
+		if !isSysadmin {
+			p.postCommandResponse(args, "/welcomebot commands can only be executed by the user with system admin role")
+			return &model.CommandResponse{}, nil
+		}
 	}
 
 	switch action {
