@@ -60,7 +60,7 @@ func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Req
 		for _, wm := range p.getWelcomeMessages() {
 			teamNameSlice := strings.Split(wm.TeamName, ",")
 			for _, tn := range teamNameSlice {
-				if data.Team.Name == tn {
+				if data.Team.Name == strings.TrimSpace(tn) {
 					for _, ac := range wm.Actions {
 						if ac.ActionName == action.Context.Action {
 							p.processActionMessage(*data, action, *ac)

@@ -9,7 +9,7 @@ import (
 	"github.com/mattermost/mattermost-server/v5/model"
 )
 
-const commandHelp = `* |/welcomebot preview [team-name] | - preview the welcome message for the given team name. The current user's username will be used to render the template.
+const commandHelp = `* |/welcomebot preview [team-name-1,team-name-2] | - preview the welcome message for the given team name. The current user's username will be used to render the template.
 * |/welcomebot list| - list the teams for which welcome messages were defined
 * |/welcomebot set_channel_welcome [welcome-message]| - set the welcome message for the given channel. Direct channels are not supported.
 * |/welcomebot get_channel_welcome| - print the welcome message set for the given channel (if any)
@@ -271,8 +271,8 @@ func getAutocompleteData() *model.AutocompleteData {
 	welcomebot := model.NewAutocompleteData("welcomebot", "[command]",
 		"Available commands: preview, help, list, set_channel_welcome, get_channel_welcome, delete_channel_welcome")
 
-	preview := model.NewAutocompleteData("preview", "[team-name]", "Preview the welcome message for the given team name")
-	preview.AddTextArgument("Team name to preview welcome message", "[team-name]", "")
+	preview := model.NewAutocompleteData("preview", "[team-name-1,team-name-2]", "Preview the welcome message for the given team name")
+	preview.AddTextArgument("Team name to preview welcome message", "[team-name-1, team-name-2]", "")
 	welcomebot.AddCommand(preview)
 
 	list := model.NewAutocompleteData("list", "", "Lists team welcome messages")
