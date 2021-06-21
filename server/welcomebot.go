@@ -233,34 +233,34 @@ func (p *Plugin) joinChannel(action *Action, channelName string) {
 	// If it begins with @ create a DM channel
 	if strings.HasPrefix(channelName, "@") {
 		r := []rune(channelName)
-		dm_user, userErr := p.API.GetUserByUsername(string(r[1:]))
+		dmUser, userErr := p.API.GetUserByUsername(string(r[1:]))
 	
 		if userErr != nil {
 			p.API.LogError("Couldn't find DM user, continuing to next channel", "channelName", channelName)
 			return
 		}
 
-		if !dm_user.IsBot {
+		if !dmUser.IsBot {
 			p.API.LogError("Specified DM user is not a bot, continuing to next channel", "channelName", channelName)
 			return
 		}
 		
-		dm_channel, err := p.API.GetDirectChannel(dm_user.Id, action.Context.UserID)
+		dmChannel, err := p.API.GetDirectChannel(dmUser.Id, action.Context.UserID)
 
 		if err != nil {
-			p.API.LogError("Couldn't create or get DM channel, continuing to next channel", "user_id", action.Context.UserID, "channelName", channelName, "channel_id", dm_channel.Id)
+			p.API.LogError("Couldn't create or get DM channel, continuing to next channel", "user_id", action.Context.UserID, "channelName", channelName, "channel_id", dmChannel.Id)
 			return
 		}
 		
-		dm_message := "Welcome to the team!"
+		dmMessage := "Welcome to the team!"
 		if len(action.Context.DirectMessagePost) != 0 {
-			dm_message = action.Context.DirectMessagePost
+			dmMessage = action.Context.DirectMessagePost
 		}			
 
 		post := &model.Post{
-			Message:   dm_message,
-			ChannelId: dm_channel.Id,
-			UserId:    dm_user.Id,
+			Message:   dmMessage,
+			ChannelId: dmChannel.Id,
+			UserId:    dmUser.Id,
 		}
 
 		if _, err := p.API.CreatePost(post); err != nil {
