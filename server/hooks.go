@@ -20,6 +20,8 @@ func (p *Plugin) UserHasJoinedTeam(c *plugin.Context, teamMember *model.TeamMemb
 	for _, message := range p.getWelcomeMessages() {
 		if message.TeamName == data.Team.Name {
 			go p.processWelcomeMessage(*data, *message)
+		} else if message.TeamName == "*" {
+			go p.processWelcomeMessage(*data, *message)
 		}
 	}
 }

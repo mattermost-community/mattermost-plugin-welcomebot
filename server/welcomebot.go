@@ -66,7 +66,7 @@ func (p *Plugin) newSampleMessageTemplate(teamName, userID string) (*MessageTemp
 		return nil, fmt.Errorf("failed to query user %s: %w", userID, err)
 	}
 
-	if data.Team, err = p.API.GetTeamByName(teamName); err != nil {
+	if data.Team, err = p.API.GetTeamByName(strings.ToLower(teamName)); err != nil {
 		p.API.LogError("failed to query team", "team_name", teamName, "err", err)
 		return nil, fmt.Errorf("failed to query team %s: %w", teamName, err)
 	}
