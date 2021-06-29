@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/mattermost/mattermost-server/v5/plugin"
@@ -143,7 +142,7 @@ func (p *Plugin) validateCommand(action string, parameters []string) string {
 func (p *Plugin) validatePreviewPrivileges(teamID string, args *model.CommandArgs) bool {
 	_, teamMemberErr := p.API.GetTeamMember(teamID, args.UserId)
 	if teamMemberErr != nil {
-		if teamMemberErr.StatusCode == http.StatusNotFound {
+		if teamMemberErr.StatusCode == 404 {
 			p.postCommandResponse(args, "You are not a member of that team.")
 			return false
 		}
