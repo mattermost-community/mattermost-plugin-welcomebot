@@ -230,16 +230,16 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 			p.postCommandResponse(args, "/%s commands can only be executed by the user with channel admin role", action)
 			return &model.CommandResponse{}, nil
 		}
-	} else {
-		isSysadmin, err := p.hasSysadminRole(args.UserId)
-		if err != nil {
-			p.postCommandResponse(args, "authorization failed: %s", err)
-			return &model.CommandResponse{}, nil
-		}
-		if !isSysadmin {
-			p.postCommandResponse(args, "/welcomebot commands can only be executed by the user with system admin role")
-			return &model.CommandResponse{}, nil
-		}
+	}
+
+	isSysadmin, err := p.hasSysadminRole(args.UserId)
+	if err != nil {
+		p.postCommandResponse(args, "authorization failed: %s", err)
+		return &model.CommandResponse{}, nil
+	}
+	if !isSysadmin {
+		p.postCommandResponse(args, "/welcomebot commands can only be executed by the user with system admin role")
+		return &model.CommandResponse{}, nil
 	}
 
 	switch action {
