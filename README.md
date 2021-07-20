@@ -209,8 +209,6 @@ We have provided three options that are formatted identically to the channel wel
 
 For saving these messages, they are stored as KV pairs. Team message pairs have the prefix `teammsg_<team_id>` to distinguish them from the `chanmsg_<channel_id>` pairs.
 
-The dynamic messages take priority in the case that a team has both a config.json message, and a dynamic one assigned. This is to leverage the ease of deleting KV pairs, compared to editing the config.json in real-time.
-
 ## Development
 
 This plugin contains a server and webapp portion.

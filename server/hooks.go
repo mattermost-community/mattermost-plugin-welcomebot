@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"time"
 
 	"github.com/mattermost/mattermost-server/v5/mlog"
 	"github.com/mattermost/mattermost-server/v5/model"
@@ -17,8 +16,7 @@ func (p *Plugin) UserHasJoinedTeam(c *plugin.Context, teamMember *model.TeamMemb
 		return
 	}
 
-	key := fmt.Sprintf("%s%s", welcomebotTeamWelcomeKey, teamMember.TeamId)
-	teamMessage, appErr := p.API.KVGet(key)
+	teamMessage, appErr := p.GetTeamWelcomeMessageFromKV(teamMember.TeamId)
 	if appErr != nil {
 		mlog.Error(
 			"error occurred while retrieving the welcome message",
@@ -53,14 +51,6 @@ func (p *Plugin) UserHasJoinedTeam(c *plugin.Context, teamMember *model.TeamMemb
 			mlog.Err(appErr),
 		)
 	}
-
-	postChannel := &model.Post{
-		UserId:    p.botUserID,
-		ChannelId: teamMember.TeamId,
-		Message:   string(teamMessage),
-	}
-	time.Sleep(1 * time.Second)
-	_ = p.API.SendEphemeralPost(teamMember.UserId, postChannel)
 }
 
 // UserHasJoinedChannel is invoked after the membership has been committed to
@@ -69,12 +59,13 @@ func (p *Plugin) UserHasJoinedTeam(c *plugin.Context, teamMember *model.TeamMemb
 func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.ChannelMember, actor *model.User) {
 	channelInfo, appErr := p.API.GetChannel(channelMember.ChannelId)
 	if appErr != nil {
-		fmt.Print("CHANNEL NAME: " + channelInfo.Name)
 		mlog.Error(
 			"error occurred while checking the type of the chanel",
 			mlog.String("channelId", channelMember.ChannelId),
 			mlog.Err(appErr),
 		)
+		return
+	} else if channelInfo.Type == model.CHANNEL_PRIVATE {
 		return
 	}
 
@@ -121,17 +112,18 @@ func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.Ch
 		)
 	}
 
-	postChannel := &model.Post{
-		UserId:    p.botUserID,
-		ChannelId: channelMember.ChannelId,
-		Message:   string(data),
-	}
+	// Commented out in case we do not want the user immediately greeted with an ephemeral message
+	// postChannel := &model.Post{
+	// 	UserId:    p.botUserID,
+	// 	ChannelId: channelMember.ChannelId,
+	// 	Message:   string(data),
+	// }
 
-	if actor.Id == channelMember.UserId {
-		time.Sleep(3 * time.Second)
-	} else {
-		time.Sleep(15 * time.Second)
-	}
+	// if actor.Id == channelMember.UserId {
+	// 	time.Sleep(3 * time.Second)
+	// } else {
+	// 	time.Sleep(15 * time.Second)
+	// }
 
-	_ = p.API.SendEphemeralPost(channelMember.UserId, postChannel)
+	// _ = p.API.SendEphemeralPost(channelMember.UserId, postChannel)
 }
