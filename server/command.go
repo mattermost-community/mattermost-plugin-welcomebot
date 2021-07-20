@@ -512,7 +512,6 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 
 func (p *Plugin) getUniqueTeamsWithWelcomeMsgSlice(teamsWithConfigWelcome map[string]struct{}, teamsWithKVWelcome map[string]string) []string {
 	var uniqueTeams []string
-	var allTeamNames []string
 	// Place all keys into one list
 	teamsWithConfigWelcomeKeys := convertStringMapIntoKeySlice(teamsWithConfigWelcome)
 	teamIDsWithKVWelcomeKeys := convertStringMapIntoKeySlice(teamsWithKVWelcome)
@@ -526,7 +525,7 @@ func (p *Plugin) getUniqueTeamsWithWelcomeMsgSlice(teamsWithConfigWelcome map[st
 		}
 		teamsWithKVWelcomeKeys = append(teamsWithKVWelcomeKeys, team.Name)
 	}
-	allTeamNames = append(teamsWithConfigWelcomeKeys, teamsWithKVWelcomeKeys...)
+	allTeamNames := append(teamsWithConfigWelcomeKeys, teamsWithKVWelcomeKeys...)
 
 	// Leverage the unique priniciple of keys in a map to store unique values as they are encountered
 	checkMap := make(map[string]int)
@@ -539,7 +538,6 @@ func (p *Plugin) getUniqueTeamsWithWelcomeMsgSlice(teamsWithConfigWelcome map[st
 		uniqueTeams = append(uniqueTeams, teamName)
 	}
 	return uniqueTeams
-
 }
 
 // Takes maps whose keys are strings, and whose values are anything.
