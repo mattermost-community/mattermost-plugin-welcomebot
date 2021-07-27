@@ -57,17 +57,6 @@ func (p *Plugin) hasSysadminRole(userID string) (bool, error) {
 	return true, nil
 }
 
-func (p *Plugin) hasChannelAdminRole(channelID string, userID string) (bool, error) {
-	channel, err := p.API.GetChannel(channelID)
-	if err != nil {
-		return false, err
-	}
-	if channel.CreatorId != userID {
-		return false, nil
-	}
-	return true, nil
-}
-
 func (p *Plugin) validateCommand(action string, parameters []string) string {
 	switch action {
 	case commandTriggerPreview:
@@ -221,11 +210,8 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 	}
 
 	if action == commandTriggerSetChannelWelcome || action == commandTriggerGetChannelWelcome || action == commandTriggerDeleteChannelWelcome {
-		isChannelAdmin, err := p.hasChannelAdminRole(args.ChannelId, args.UserId)
-		if err != nil {
-			p.postCommandResponse(args, "authorization failed: %s", err)
-			return &model.CommandResponse{}, nil
-		}
+		isChannelAdmin := p.API.HasPermissionToChannel(args.UserId, args.ChannelId, model.PERMISSION_MANAGE_SLASH_COMMANDS)
+
 		if !isChannelAdmin {
 			p.postCommandResponse(args, "/%s commands can only be executed by the user with channel admin role", action)
 			return &model.CommandResponse{}, nil
