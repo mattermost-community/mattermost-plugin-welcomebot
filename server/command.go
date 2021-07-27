@@ -210,10 +210,10 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 	}
 
 	if action == commandTriggerSetChannelWelcome || action == commandTriggerGetChannelWelcome || action == commandTriggerDeleteChannelWelcome {
-		isChannelAdmin := p.API.HasPermissionToChannel(args.UserId, args.ChannelId, model.PERMISSION_MANAGE_SLASH_COMMANDS)
+		hasPermissionTo := p.API.HasPermissionToChannel(args.UserId, args.ChannelId, model.PERMISSION_MANAGE_SLASH_COMMANDS)
 
-		if !isChannelAdmin {
-			p.postCommandResponse(args, "/%s commands can only be executed by the user with channel admin role", action)
+		if !hasPermissionTo {
+			p.postCommandResponse(args, "/%s commands can only be executed by the user with permissions to manage the slash commands", action)
 			return &model.CommandResponse{}, nil
 		}
 	}
