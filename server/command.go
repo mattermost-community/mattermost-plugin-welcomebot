@@ -87,12 +87,12 @@ func (p *Plugin) validateCommand(action string, parameters []string) string {
 func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs) {
 	found := false
 	for _, message := range p.getWelcomeMessages() {
-		if message.TeamName == teamName {
+		if strings.Contains(message.TeamName, teamName) {
+			p.postCommandResponse(args, "%s", teamName)
 			if err := p.previewWelcomeMessage(teamName, args, *message); err != nil {
 				p.postCommandResponse(args, "error occurred while processing greeting for team `%s`: `%s`", teamName, err)
 				return
 			}
-
 			found = true
 		}
 	}
