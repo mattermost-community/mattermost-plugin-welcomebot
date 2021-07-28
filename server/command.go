@@ -88,7 +88,7 @@ func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs)
 	found := false
 	for _, message := range p.getWelcomeMessages() {
 		if message.TeamName == teamName {
-			if err := p.previewWelcomeMessage(args, *message); err != nil {
+			if err := p.previewWelcomeMessage(teamName, args, *message); err != nil {
 				p.postCommandResponse(args, "error occurred while processing greeting for team `%s`: `%s`", teamName, err)
 				return
 			}

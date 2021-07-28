@@ -57,7 +57,7 @@ func (p *Plugin) getSiteURL() string {
 	return *config.ServiceSettings.SiteURL
 }
 
-func (p *Plugin) newSampleMessageTemplate(teamID string, userID string) (*MessageTemplate, error) {
+func (p *Plugin) newSampleMessageTemplate(teamName string, userID string) (*MessageTemplate, error) {
 	data := &MessageTemplate{}
 	var err *model.AppError
 
@@ -66,9 +66,9 @@ func (p *Plugin) newSampleMessageTemplate(teamID string, userID string) (*Messag
 		return nil, fmt.Errorf("failed to query user %s: %w", userID, err)
 	}
 
-	if data.Team, err = p.API.GetTeam(teamID); err != nil {
-		p.API.LogError("failed to query team", "team_id", teamID, "err", err)
-		return nil, fmt.Errorf("failed to query team %s: %w", teamID, err)
+	if data.Team, err = p.API.GetTeamByName(strings.ToLower(teamName)); err != nil {
+		p.API.LogError("failed to query team", "team_name", teamName, "err", err)
+		return nil, fmt.Errorf("failed to query team %s: %w", teamName, err)
 	}
 
 	if data.Townsquare, err = p.API.GetChannelByName(data.Team.Id, "town-square", false); err != nil {
@@ -86,8 +86,8 @@ func (p *Plugin) newSampleMessageTemplate(teamID string, userID string) (*Messag
 	return data, nil
 }
 
-func (p *Plugin) previewWelcomeMessage(args *model.CommandArgs, configMessage ConfigMessage) error {
-	messageTemplate, err := p.newSampleMessageTemplate(args.TeamId, args.UserId)
+func (p *Plugin) previewWelcomeMessage(teamName string, args *model.CommandArgs, configMessage ConfigMessage) error {
+	messageTemplate, err := p.newSampleMessageTemplate(teamName, args.UserId)
 	if err != nil {
 		return err
 	}
