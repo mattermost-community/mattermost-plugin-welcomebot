@@ -88,9 +88,9 @@ func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs)
 	found := false
 	for _, message := range p.getWelcomeMessages() {
 		var teamNamesArr = strings.Split(message.TeamName, ",")
-		for _, item := range teamNamesArr {
-			messageTeamName := strings.Trim(item, "\t")
-			if messageTeamName == teamName {
+		for _, name := range teamNamesArr {
+			tn := strings.Trim(name, "\t")
+			if tn == teamName {
 				p.postCommandResponse(args, "%s", teamName)
 				if err := p.previewWelcomeMessage(teamName, args, *message); err != nil {
 					p.postCommandResponse(args, "error occurred while processing greeting for team `%s`: `%s`", teamName, err)
