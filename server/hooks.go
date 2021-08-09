@@ -27,7 +27,7 @@ func (p *Plugin) UserHasJoinedTeam(c *plugin.Context, teamMember *model.TeamMemb
 	}
 
 	if teamMessage == nil {
-		// No dynamic welcome message for the given team, so we check if one as been set in the config.json
+		// No dynamic welcome message for the given team, so we check if one has been set in the config.json
 		for _, message := range p.getWelcomeMessages() {
 			if message.TeamName == data.Team.Name {
 				go p.processWelcomeMessage(*data, *message)
@@ -39,11 +39,10 @@ func (p *Plugin) UserHasJoinedTeam(c *plugin.Context, teamMember *model.TeamMemb
 	// We send a DM and an opportunistic ephemeral message to the channel. See
 	// the discussion at the link below for more details:
 	// https://github.com/mattermost/mattermost-plugin-welcomebot/pull/31#issuecomment-611691023
-	teamAddMessage := "# Welcome to the " + data.Team.DisplayName + " team!! \n\n"
 	postDM := &model.Post{
 		UserId:    p.botUserID,
 		ChannelId: data.DirectMessage.Id,
-		Message:   teamAddMessage + string(teamMessage),
+		Message:   string(teamMessage),
 	}
 	if _, appErr := p.API.CreatePost(postDM); appErr != nil {
 		mlog.Error("failed to post welcome message to the channel",

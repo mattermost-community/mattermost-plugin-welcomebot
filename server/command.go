@@ -32,7 +32,7 @@ const (
 	commandTriggerDeleteTeamWelcome    = "delete_team_welcome"
 
 	// Error Message Constants
-	unsetMessageError = "welcome message has not been set yet"
+	unsetMessageError = "welcome message has not been set"
 )
 
 func getCommand() *model.Command {
@@ -112,15 +112,15 @@ func (p *Plugin) validateCommand(action string, parameters []string) string {
 		}
 	case commandTriggerSetChannelWelcome:
 		if len(parameters) == 0 {
-			return "`set_channel_welcome` command requires the message to be provided"
+			return "`" + commandTriggerSetChannelWelcome + "` command requires the message to be provided"
 		}
 	case commandTriggerGetChannelWelcome:
 		if len(parameters) > 0 {
-			return "`get_channel_welcome` command does not accept any extra parameters"
+			return "`" + commandTriggerGetChannelWelcome + "` command does not accept any extra parameters"
 		}
 	case commandTriggerDeleteChannelWelcome:
 		if len(parameters) > 0 {
-			return "`delete_channel_welcome` command does not accept any extra parameters"
+			return "`" + commandTriggerDeleteChannelWelcome + "` command does not accept any extra parameters"
 		}
 	case commandTriggerSetTeamWelcome:
 		if len(parameters) == 0 {
@@ -160,7 +160,7 @@ func (p *Plugin) isSystemOrTeamAdmin(args *model.CommandArgs, userID string, tea
 	isTeamAdmin, teamAdminError := p.hasTeamAdminRole(userID, teamID)
 
 	if sysAdminError != nil {
-		p.postCommandResponse(args, "error occurred while getting the System Admin Role `%s`: `%s`", teamID, sysAdminError)
+		p.postCommandResponse(args, "error occurred while getting the System Admin Role: `%s`", sysAdminError)
 		return false
 	}
 	if teamAdminError != nil {
@@ -174,7 +174,7 @@ func (p *Plugin) isSystemOrTeamAdmin(args *model.CommandArgs, userID string, tea
 	return true
 }
 
-// This retrives a map of team Ids with their respective welcome message
+// This retrieves a map of team Ids with their respective welcome message
 func (p *Plugin) getTeamKVWelcomeMessagesMap(args *model.CommandArgs) map[string]string {
 	teamsList, teamErr := p.API.GetTeams()
 	if teamErr != nil {
@@ -295,7 +295,7 @@ func (p *Plugin) executeCommandSetWelcome(args *model.CommandArgs) {
 		return
 	}
 
-	p.postCommandResponse(args, "stored the welcome message:\n%s", message)
+	p.postCommandResponse(args, "stored the channel welcome message:\n%s", message)
 }
 
 func (p *Plugin) executeCommandGetWelcome(args *model.CommandArgs) {
@@ -353,7 +353,7 @@ func (p *Plugin) executeCommandSetTeamWelcome(args *model.CommandArgs) {
 		return
 	}
 
-	p.postCommandResponse(args, "stored the welcome message:\n%s", message)
+	p.postCommandResponse(args, "stored the team welcome message:\n%s", message)
 }
 
 func (p *Plugin) executeCommandDeleteTeamWelcome(args *model.CommandArgs) {
@@ -375,7 +375,7 @@ func (p *Plugin) executeCommandDeleteTeamWelcome(args *model.CommandArgs) {
 		return
 	}
 
-	p.postCommandResponse(args, "welcome message has been deleted")
+	p.postCommandResponse(args, "team welcome message has been deleted")
 }
 
 func (p *Plugin) executeCommandGetTeamWelcome(args *model.CommandArgs) {
