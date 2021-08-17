@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -139,19 +140,19 @@ func (p *Plugin) validateCommand(action string, parameters []string) string {
 	return ""
 }
 
-func (p *Plugin) validatePreviewPrivileges(teamID string, args *model.CommandArgs) bool {
+func (p *Plugin) validatePreviewPrivileges(teamID string, args *model.CommandArgs) (bool, error) {
 	_, teamMemberErr := p.API.GetTeamMember(teamID, args.UserId)
 	if teamMemberErr != nil {
 		if teamMemberErr.StatusCode == 404 {
 			p.postCommandResponse(args, "You are not a member of that team.")
-			return false
+			return false, teamMemberErr
 		}
 		p.postCommandResponse(args, "error occurred while getting the Team Admin Role `%s`: `%s`", teamID, teamMemberErr)
-		return false
+		return false, teamMemberErr
 	}
 	doesUserHavePrivileges := p.isSystemOrTeamAdmin(args, args.UserId, teamID)
 
-	return doesUserHavePrivileges
+	return doesUserHavePrivileges, nil
 }
 
 // checks if the user has System or Team Admin access to the given team
@@ -207,7 +208,7 @@ func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs)
 	}
 	teamID := team.Id
 
-	validPrivileges := p.validatePreviewPrivileges(teamID, args)
+	validPrivileges, _ := p.validatePreviewPrivileges(teamID, args)
 	if !validPrivileges {
 		return
 	}
@@ -413,37 +414,40 @@ func (p *Plugin) executeCommandGetTeamWelcome(args *model.CommandArgs) {
 	p.postCommandResponse(args, string(data))
 }
 
-func (p *Plugin) checkCommandPermission(args *model.CommandArgs) bool {
+func (p *Plugin) checkCommandPermission(args *model.CommandArgs) (bool, error) {
 	isSysadmin, err := p.hasSysadminRole(args.UserId)
 	if err != nil {
 		p.postCommandResponse(args, "authorization failed: %s", err)
-		return true
+		return true, err
 	}
 	isTeamAdmin, teamAdminErr := p.hasTeamAdminRole(args.UserId, args.TeamId)
 	if teamAdminErr != nil {
 		p.postCommandResponse(args, "Team admin authorization failed: %s", teamAdminErr)
-		return true
+		return true, teamAdminErr
 	}
 	isChannelAdmin, channelAdminErr := p.hasChannelAdminRole(args.UserId, args.ChannelId)
 	if channelAdminErr != nil {
 		p.postCommandResponse(args, "Channel admin authorization failed: %s", channelAdminErr)
-		return true
+		return true, channelAdminErr
 	}
 	if !isSysadmin && !isTeamAdmin && !isChannelAdmin {
-		p.postCommandResponse(args, "/welcomebot commands can only be executed by the user with a system admin role, team admin role, or channel admin role")
-		return true
+		errMsg := "/welcomebot commands can only be executed by the user with a system admin role, team admin role, or channel admin role"
+		p.postCommandResponse(args, errMsg)
+		return true, errors.New(errMsg)
 	}
 
-	isTownSquare, channelErr := p.checkIfTownSquare(args.ChannelId)
-	if channelErr != nil {
-		p.postCommandResponse(args, "Channel authorization failed: %s", channelAdminErr)
-		return true
-	}
-	if !isSysadmin && !isTeamAdmin && isChannelAdmin && isTownSquare {
-		p.postCommandResponse(args, "/welcomebot commands cannot be executed by a channel admin in Town Square")
-		return true
-	}
-	return false
+	// Commented Out In case for future iterations of welcome bot we want to restrict channel welcome messages for town square.
+	// isTownSquare, channelErr := p.checkIfTownSquare(args.ChannelId)
+	// if channelErr != nil {
+	// 	p.postCommandResponse(args, "Channel authorization failed: %s", channelAdminErr)
+	// 	return true, channelErr
+	// }
+	// if !isSysadmin && !isTeamAdmin && isChannelAdmin && isTownSquare {
+	// 	errMsg := "/welcomebot commands cannot be executed by a channel admin in Town Square"
+	// 	p.postCommandResponse(args, errMsg)
+	// 	return true, errors.New(errMsg)
+	// }
+	return false, nil
 }
 
 func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
@@ -467,7 +471,7 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 		return &model.CommandResponse{}, nil
 	}
 
-	err := p.checkCommandPermission(args)
+	err, _ := p.checkCommandPermission(args)
 	if err {
 		return &model.CommandResponse{}, nil
 	}
