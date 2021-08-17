@@ -90,16 +90,17 @@ func (p *Plugin) hasChannelAdminRole(userID string, channelID string) (bool, err
 	return true, nil
 }
 
-func (p *Plugin) checkIfTownSquare(channelID string) (bool, error) {
-	channel, channelErr := p.API.GetChannel(channelID)
-	if channelErr != nil {
-		return false, channelErr
-	}
-	if channel.Name != model.DEFAULT_CHANNEL {
-		return false, nil
-	}
-	return true, nil
-}
+// Commented out for simplicity of welcome bot. Once restriction is wanted, this can be uncommented.
+// func (p *Plugin) checkIfTownSquare(channelID string) (bool, error) {
+// 	channel, channelErr := p.API.GetChannel(channelID)
+// 	if channelErr != nil {
+// 		return false, channelErr
+// 	}
+// 	if channel.Name != model.DEFAULT_CHANNEL {
+// 		return false, nil
+// 	}
+// 	return true, nil
+// }
 
 func (p *Plugin) validateCommand(action string, parameters []string) string {
 	switch action {
