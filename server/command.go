@@ -209,23 +209,21 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 		return &model.CommandResponse{}, nil
 	}
 
-	if action == commandTriggerSetChannelWelcome || action == commandTriggerGetChannelWelcome || action == commandTriggerDeleteChannelWelcome {
-		hasPermissionTo := p.API.HasPermissionToChannel(args.UserId, args.ChannelId, model.PERMISSION_MANAGE_SLASH_COMMANDS)
-
-		if !hasPermissionTo {
-			p.postCommandResponse(args, "/%s commands can only be executed by the user with permissions to manage the slash commands", action)
-			return &model.CommandResponse{}, nil
-		}
-	}
-
 	isSysadmin, err := p.hasSysadminRole(args.UserId)
 	if err != nil {
 		p.postCommandResponse(args, "authorization failed: %s", err)
 		return &model.CommandResponse{}, nil
 	}
+
 	if !isSysadmin {
-		p.postCommandResponse(args, "/welcomebot commands can only be executed by the user with system admin role")
-		return &model.CommandResponse{}, nil
+		if action == commandTriggerSetChannelWelcome || action == commandTriggerGetChannelWelcome || action == commandTriggerDeleteChannelWelcome {
+			hasPermissionTo := p.API.HasPermissionToChannel(args.UserId, args.ChannelId, model.PERMISSION_MANAGE_CHANNEL_ROLES)
+
+			if !hasPermissionTo {
+				p.postCommandResponse(args, "/%s commands can only be executed by the user with permissions to manage the slash commands", action)
+				return &model.CommandResponse{}, nil
+			}
+		}
 	}
 
 	switch action {
