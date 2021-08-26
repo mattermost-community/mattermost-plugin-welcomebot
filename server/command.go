@@ -89,7 +89,7 @@ func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs)
 	for _, message := range p.getWelcomeMessages() {
 		var teamNamesArr = strings.Split(message.TeamName, ",")
 		for _, name := range teamNamesArr {
-			tn := strings.TrimSpaces(name)
+			tn := strings.TrimSpace(name)
 			if tn == teamName {
 				p.postCommandResponse(args, "%s", teamName)
 				if err := p.previewWelcomeMessage(teamName, args, *message); err != nil {
