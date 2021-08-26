@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/mattermost/mattermost-server/v5/mlog"
@@ -18,8 +19,12 @@ func (p *Plugin) UserHasJoinedTeam(c *plugin.Context, teamMember *model.TeamMemb
 	}
 
 	for _, message := range p.getWelcomeMessages() {
-		if message.TeamName == data.Team.Name {
-			go p.processWelcomeMessage(*data, *message)
+		var teamNamesArr = strings.Split(message.TeamName, ",")
+		for _, name := range teamNamesArr {
+			tn := strings.TrimSpace(name)
+			if tn == data.Team.Name {
+				go p.processWelcomeMessage(*data, *message)
+			}
 		}
 	}
 }
