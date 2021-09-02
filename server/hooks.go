@@ -20,13 +20,13 @@ func (p *Plugin) UserHasJoinedTeam(c *plugin.Context, teamMember *model.TeamMemb
 
 	for _, message := range p.getWelcomeMessages() {
 		switch message.TeamName {
-			case data.Team.Name:
+		case data.Team.Name:
 			var teamNamesArr = strings.Split(message.TeamName, ",")
 			for _, name := range teamNamesArr {
 				tn := strings.TrimSpace(name)
 				if tn == data.Team.Name {
-					 go p.processWelcomeMessage(*data, *message)
-				 }
+					go p.processWelcomeMessage(*data, *message)
+				}
 			}
 		case "*":
 			go p.processWelcomeMessage(*data, *message)
