@@ -32,7 +32,7 @@ To configure the Welcome Bot, edit your `config.json` file with a message you wa
             "com.mattermost.welcomebot": {
                 "WelcomeMessages": [
                     {
-                        "TeamName": "your-team-name",
+                        "TeamName": "your-team-name, your-second-team-name",
                         "DelayInSeconds": 3,
                         "Message": [
                             "Your welcome message here. Each list item specifies one line in the message text."
@@ -102,7 +102,7 @@ To accomplish the above, you can specify the following configuration in your `co
             "com.mattermost.welcomebot": {
                 "WelcomeMessages": [
                     {
-                        "TeamName": "staff",
+                        "TeamName": "staff, management",
                         "DelayInSeconds": 5,
                         "Message": [
                             "### Welcome {{.UserDisplayName}} to the Staff {{.Team.DisplayName}} team!",
