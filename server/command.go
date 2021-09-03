@@ -220,7 +220,7 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 			hasPermissionTo := p.API.HasPermissionToChannel(args.UserId, args.ChannelId, model.PERMISSION_MANAGE_CHANNEL_ROLES)
 
 			if !hasPermissionTo {
-				p.postCommandResponse(args, "/%s commands can only be executed by the user with permissions to manage the slash commands", action)
+				p.postCommandResponse(args, "The `/welcomebot %s` command can only be executed by system admins and channel admins.", action)
 				return &model.CommandResponse{}, nil
 			}
 		}
