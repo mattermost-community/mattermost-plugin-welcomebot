@@ -134,7 +134,7 @@ func (p *Plugin) executeCommandSetWelcome(args *model.CommandArgs) {
 		return
 	}
 
-	if channelInfo.Type == model.CHANNEL_DIRECT {
+	if channelInfo.Type == model.ChannelTypeDirect {
 		p.postCommandResponse(args, "welcome messages are not supported for direct channels")
 		return
 	}
