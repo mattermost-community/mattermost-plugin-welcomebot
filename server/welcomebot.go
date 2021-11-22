@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mattermost/mattermost-server/v5/model"
+	"github.com/mattermost/mattermost-server/v6/model"
 )
 
 func (p *Plugin) constructMessageTemplate(userID, teamID string) *MessageTemplate {
@@ -40,7 +40,7 @@ func (p *Plugin) constructMessageTemplate(userID, teamID string) *MessageTemplat
 		}
 	}
 
-	data.UserDisplayName = data.User.GetDisplayName(model.SHOW_NICKNAME_FULLNAME)
+	data.UserDisplayName = data.User.GetDisplayName(model.ShowNicknameFullName)
 
 	return data
 }
@@ -81,7 +81,7 @@ func (p *Plugin) newSampleMessageTemplate(teamName, userId string) (*MessageTemp
 		return nil, fmt.Errorf("failed to query direct message channel %s: %w", data.User.Id, err)
 	}
 
-	data.UserDisplayName = data.User.GetDisplayName(model.SHOW_NICKNAME_FULLNAME)
+	data.UserDisplayName = data.User.GetDisplayName(model.ShowNicknameFullName)
 
 	return data, nil
 }

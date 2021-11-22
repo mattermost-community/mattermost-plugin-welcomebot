@@ -56,7 +56,7 @@ endif
 govet:
 ifneq ($(HAS_SERVER),)
 	@echo Running govet
-	@# Workaroung because you can't install binaries without adding them to go.mod 
+	@# Workaroung because you can't install binaries without adding them to go.mod
 	env GO111MODULE=off $(GO) get golang.org/x/tools/go/analysis/passes/shadow/cmd/shadow
 	$(GO) vet ./server/...
 	$(GO) vet -vettool=$(GOPATH)/bin/shadow ./server/...
@@ -68,9 +68,11 @@ endif
 server:
 ifneq ($(HAS_SERVER),)
 	mkdir -p server/dist;
-	cd server && env GOOS=linux GOARCH=amd64 $(GO) build -o dist/plugin-linux-amd64;
-	cd server && env GOOS=darwin GOARCH=amd64 $(GO) build -o dist/plugin-darwin-amd64;
-	cd server && env GOOS=windows GOARCH=amd64 $(GO) build -o dist/plugin-windows-amd64.exe;
+	cd server && env GOOS=linux GOARCH=amd64 $(GO) build $(GO_BUILD_FLAGS) -o dist/plugin-linux-amd64;
+	cd server && env GOOS=linux GOARCH=arm64 $(GO) build $(GO_BUILD_FLAGS) -o dist/plugin-linux-arm64;
+	cd server && env GOOS=darwin GOARCH=amd64 $(GO) build $(GO_BUILD_FLAGS) -o dist/plugin-darwin-amd64;
+	cd server && env GOOS=darwin GOARCH=arm64 $(GO) build $(GO_BUILD_FLAGS) -o dist/plugin-darwin-arm64;
+	cd server && env GOOS=windows GOARCH=amd64 $(GO) build $(GO_BUILD_FLAGS) -o dist/plugin-windows-amd64.exe;
 endif
 
 ## Ensures NPM dependencies are installed without having to run this all the time.
@@ -154,7 +156,7 @@ endif
 
 ## Extract strings for translation from the source code.
 .PHONY: i18n-extract
-i18n-extract: 
+i18n-extract:
 ifneq ($(HAS_WEBAPP),)
 	@[[ -d $(MM_UTILITIES_DIR) ]] || echo "You must clone github.com/mattermost/mattermost-utilities repo in .. to use this command"
 	@[[ -d $(MM_UTILITIES_DIR) ]] && cd $(MM_UTILITIES_DIR) && npm install && npm run babel && node mmjstool/build/index.js i18n extract-webapp --webapp-dir ../mattermost-plugin-demo/webapp

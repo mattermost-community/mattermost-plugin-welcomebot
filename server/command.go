@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/mattermost/mattermost-server/v5/plugin"
-
-	"github.com/mattermost/mattermost-server/v5/model"
+	"github.com/mattermost/mattermost-server/v6/model"
+	"github.com/mattermost/mattermost-server/v6/plugin"
 )
 
 const COMMAND_HELP = `* |/welcomebot preview [team-name] | - preview the welcome message for the given team name. The current user's username will be used to render the template.
@@ -124,7 +123,7 @@ func (p *Plugin) executeCommandSetWelcome(args *model.CommandArgs) {
 		return
 	}
 
-	if channelInfo.Type == model.CHANNEL_PRIVATE {
+	if channelInfo.Type == model.ChannelTypeDirect {
 		p.postCommandResponse(args, "welcome messages are not supported for direct channels")
 		return
 	}

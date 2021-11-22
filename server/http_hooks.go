@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/mattermost/mattermost-server/v5/model"
-	"github.com/mattermost/mattermost-server/v5/plugin"
+	"github.com/mattermost/mattermost-server/v6/model"
+	"github.com/mattermost/mattermost-server/v6/plugin"
 )
 
 // ServeHTTP allows the plugin to implement the http.Handler interface. Requests destined for the
@@ -45,7 +45,7 @@ func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	data.UserDisplayName = data.User.GetDisplayName(model.SHOW_NICKNAME_FULLNAME)
+	data.UserDisplayName = data.User.GetDisplayName(model.ShowNicknameFullName)
 
 	// Check to make sure you're still in the team
 	if teamMember, err := p.API.GetTeamMember(action.Context.TeamID, action.Context.UserID); err != nil || teamMember == nil || teamMember.DeleteAt > 0 {
@@ -81,7 +81,8 @@ func (p *Plugin) encodeEphemeralMessage(w http.ResponseWriter, message string) {
 		EphemeralText: message,
 	}
 
-	if _, err := w.Write([]byte(resp.ToJson())); err != nil {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		p.API.LogWarn("failed to write PostActionIntegrationResponse")
 	}
 }
