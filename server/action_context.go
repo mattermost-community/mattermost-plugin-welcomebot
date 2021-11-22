@@ -9,6 +9,6 @@ type ActionContext struct {
 
 // Action type for decoding action buttons
 type Action struct {
-	UserID  string         `json:"user_id"`
 	Context *ActionContext `json:"context"`
+	UserID  string         `json:"user_id"`
 }

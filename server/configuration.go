@@ -25,8 +25,11 @@ type ConfigMessageAction struct {
 
 // ConfigMessage represents the message to send in channel
 type ConfigMessage struct {
-	// Number of seconds to wait before sending the message
-	DelayInSeconds int
+	// This message will fire when it matches the supplied team
+	TeamName string
+
+	// Actions that can be taken with this message
+	Actions []*ConfigMessageAction
 
 	// The message to send.  This is a go template that can access any member in MessageTemplate
 	Message []string
@@ -34,11 +37,8 @@ type ConfigMessage struct {
 	// The message to send as a slack attachment.  This is a go template that can access any member in MessageTemplate
 	AttachmentMessage []string
 
-	// This message will fire when it matches the supplied team
-	TeamName string
-
-	// Actions that can be taken with this message
-	Actions []*ConfigMessageAction
+	// Number of seconds to wait before sending the message
+	DelayInSeconds int
 }
 
 // Configuration from config.json

@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mattermost/mattermost-server/v5/mlog"
-	"github.com/mattermost/mattermost-server/v5/model"
-	"github.com/mattermost/mattermost-server/v5/plugin"
+	"github.com/mattermost/mattermost-server/v6/model"
+	"github.com/mattermost/mattermost-server/v6/plugin"
+	"github.com/mattermost/mattermost-server/v6/shared/mlog"
 )
 
 // UserHasJoinedTeam is invoked after the membership has been committed to the database. If
@@ -40,7 +40,7 @@ func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.Ch
 			mlog.Err(appErr),
 		)
 		return
-	} else if channelInfo.Type == model.CHANNEL_PRIVATE {
+	} else if channelInfo.Type == model.ChannelTypePrivate {
 		return
 	}
 
