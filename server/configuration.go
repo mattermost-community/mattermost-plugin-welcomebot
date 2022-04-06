@@ -39,6 +39,9 @@ type ConfigMessage struct {
 
 	// Number of seconds to wait before sending the message
 	DelayInSeconds int
+
+	// Whether or not to include guest users.
+	IncludeGuests bool
 }
 
 // Configuration from config.json
