@@ -23,6 +23,9 @@ func (p *Plugin) UserHasJoinedTeam(c *plugin.Context, teamMember *model.TeamMemb
 		for _, name := range teamNamesArr {
 			tn := strings.TrimSpace(name)
 			if tn == data.Team.Name {
+				if data.User.IsGuest() && !message.IncludeGuests {
+					continue
+				}
 				go p.processWelcomeMessage(*data, *message)
 			}
 		}

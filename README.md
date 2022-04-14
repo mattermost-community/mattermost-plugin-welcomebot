@@ -66,6 +66,7 @@ where
 - **TeamName**: The teams for which the Welcome Bot sends a message. Must be the team handle used in the URL, in lowercase. For example, in the following URL, the **TeamName** value is `my-team`: https://example.com/my-team/channels/my-channel . In the case of multiple teams, use comma separated fields. For example `"my-team, my-team-2"` to display the same messages for both `my-team` and `my-team-2`
 - **DelayInSeconds**: The number of seconds after joining a team that the user receives a welcome message.
 - **Message**: The message posted to the user.
+- (Optional) **IncludeGuests**: Whether or not to include guest users.
 - (Optional) **AttachmentMessage**: Message text in attachment containing user action buttons.
 - (Optional) **Actions**: Use this to add new team members to channels automatically or based on which action button they pressed.
     - **ActionType**: One of `button` or `automatic`. When `button`: enables uses to select which types of channels they want to join. When `automatic`: the user is automatically added to the specified channels.
