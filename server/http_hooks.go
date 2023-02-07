@@ -13,7 +13,7 @@ import (
 func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
 	var action *Action
 	if err := json.NewDecoder(r.Body).Decode(&action); err != nil || action == nil {
-		p.API.LogError("failed to decode action from request body", "error", err)
+		p.API.LogDebug("failed to decode action from request body", "error", err.Error())
 		p.encodeEphemeralMessage(w, "WelcomeBot Error: We could not decode the action")
 		return
 	}
