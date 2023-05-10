@@ -33,6 +33,7 @@ To configure the Welcome Bot, edit your `config.json` file with a message you wa
                     {
                         "TeamName": "your-team-name",
                         "DelayInSeconds": 3,
+                        "IncludeGuests": false,
                         "Message": [
                             "Your welcome message here. Each list item specifies one line in the message text."
                         ],
