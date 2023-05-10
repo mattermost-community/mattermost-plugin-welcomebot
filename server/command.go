@@ -86,17 +86,13 @@ func (p *Plugin) validateCommand(action string, parameters []string) string {
 func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs) {
 	found := false
 	for _, message := range p.getWelcomeMessages() {
-		var teamNamesArr = strings.Split(message.TeamName, ",")
-		for _, name := range teamNamesArr {
-			tn := strings.TrimSpace(name)
-			if tn == teamName {
-				p.postCommandResponse(args, "%s", teamName)
-				if err := p.previewWelcomeMessage(teamName, args, *message); err != nil {
-					p.postCommandResponse(args, "error occurred while processing greeting for team `%s`: `%s`", teamName, err)
-					return
-				}
-				found = true
+		if message.TeamName == teamName {
+			if err := p.previewWelcomeMessage(teamName, args, *message); err != nil {
+				p.postCommandResponse(args, "error occurred while processing greeting for team `%s`: `%s`", teamName, err)
+				return
 			}
+
+			found = true
 		}
 	}
 
@@ -134,7 +130,7 @@ func (p *Plugin) executeCommandSetWelcome(args *model.CommandArgs) {
 		return
 	}
 
-	if channelInfo.Type == model.ChannelTypeDirect {
+	if channelInfo.Type == model.ChannelTypePrivate {
 		p.postCommandResponse(args, "welcome messages are not supported for direct channels")
 		return
 	}
