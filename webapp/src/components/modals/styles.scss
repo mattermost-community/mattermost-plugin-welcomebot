@@ -1,0 +1,283 @@
+$color_1: #000000;
+$color_2: #FF0000;
+$border-color_1: transparent;
+
+@keyframes fade-in {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes fade-out {
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
+}
+
+.custom-modal.modal {
+	opacity: 1;
+	padding-top: 230px;
+}
+
+.modal-open {
+	.modal {
+		overflow-x: hidden;
+		overflow-y: hidden;
+	}
+}
+
+.modal-dialog {
+	.modal-header {
+		display: flex;
+	}
+	.modal-body {
+		display: flex;
+		flex-direction: column;
+	}
+	width: 615px;
+	max-width: 615px;
+}
+
+.custom-modal-body {
+	height: 80%;
+	overflow-y: auto;
+}
+
+.fade-enter {
+	opacity: 0;
+	animation: fade-in 300ms forwards;
+}
+
+.fade-exit {
+	opacity: 1;
+	animation: fade-out 300ms forwards;
+}
+
+.btn-group {
+	display: flex;
+	justify-content: space-between;
+	.btn.btn-default {
+		background: none;
+		border-color: $border-color_1;
+		border: transparent;
+		&:hover {
+			background: transparent;
+			color: $color_1;
+		}
+		&:focus {
+			background: transparent;
+			color: $color_1;
+		}
+	}
+}
+
+.radio.btn-group {
+	justify-content: flex-start;
+}
+
+.options {
+	.btn.btn-primary {
+		background: transparent;
+	}
+}
+
+.radio {
+	margin-top: 0;
+	margin-bottom: 0;
+}
+
+.radio-form {
+	margin-bottom: 0px;
+}
+
+.add-actions {
+	margin-top: 15px;
+}
+
+.validation-warning {
+	color: $color_2;
+	font-size: 12px;
+}
+
+.config-form {
+	width: 100%;
+}
+
+.add-action-button {
+	display: block;
+}
+
+.guest-button.active {
+	box-shadow: none;
+	outline: transparent;
+}
+
+.action-typeButton.active {
+	box-shadow: none;
+	outline: transparent;
+}
+
+.warning {
+	margin-bottom: 27px;
+	color: $color_1;
+	.form-group {
+		position: relative;
+	}
+}
+
+.gapping {
+	margin-bottom: 25px;
+}
+
+.form-group {
+	position: relative;
+	margin-bottom: 10px;
+}
+
+.warnings {
+	margin-bottom: 25px;
+	.form-group {
+		position: relative;
+	}
+}
+
+.form-label {
+	color: $color_1;
+}
+
+.type {
+	width: 87px;
+}
+
+.successfull-message {
+	width: 110px;
+}
+
+.successfull-message-content {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.channels-added {
+	width: 111px;
+	display: flex;
+	justify-content: center;
+}
+
+.channels-added-content {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.action-name {
+	vertical-align: middle;
+	width: 87px;
+}
+
+.action-name-content {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.display-name {
+	vertical-align: middle;
+	width: 87px;
+}
+
+.display-name-content {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.type-action {
+	width: 87px;
+}
+
+.success-message-action {
+	width: 111px;
+}
+
+.channels-added-action {
+	width: 174px;
+	display: flex;
+	text-align: center;
+}
+
+.name-action {
+	width: 87px;
+}
+
+.display-name-action {
+	width: 122px;
+}
+
+.option-buttons {
+	width: 100px;
+}
+
+.list-table {
+	.table {
+		tbody {
+			tr {
+				td {
+					border: 1px solid #dddddd;
+					vertical-align: middle;
+				}
+			}
+		}
+		thead {
+			tr {
+				th {
+					border: 1px solid #dddddd;
+					vertical-align: middle;
+					td {
+						white-space: nowrap;
+					}
+				}
+			}
+			border: 1px solid #dddddd;
+			vertical-align: middle;
+			width: 100%;
+		}
+		td {
+			text-align: center;
+			vertical-align: middle;
+		}
+		th {
+			text-align: center;
+			vertical-align: bottom;
+		}
+		width: 100%;
+		margin-top: 0;
+		margin-bottom: 0;
+		table-layout: fixed;
+		tr {
+			display: flex;
+			width: 100%;
+		}
+	}
+	th {
+		text-align: center;
+	}
+}
+
+.team-name-dropdown {
+	color: $color_1;
+}
+
+.guest-button {
+	&:focus {
+		outline: none;
+		box-shadow: none;
+	}
+}

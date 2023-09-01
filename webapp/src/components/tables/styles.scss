@@ -1,0 +1,153 @@
+$color_1: #000000;
+$border-color_1: transparent;
+
+.existing-config-table.btn-group {
+	display: flex;
+	justify-content: space-between;
+	gap: 10px;
+	gap: 1px;
+	.btn.btn-default {
+		background: none;
+		border-color: $border-color_1;
+		border: transparent;
+	}
+}
+
+.existing-config-table.table.table {
+	tbody {
+		tr {
+			td {
+				border: 2px solid #dddddd;
+				vertical-align: middle;
+			}
+		}
+	}
+	thead {
+		tr {
+			th {
+				border: 2px solid #dddddd;
+				vertical-align: middle;
+			}
+		}
+		border: 2px solid #dddddd;
+		vertical-align: middle;
+	}
+}
+
+.existing-config-table.table {
+	td {
+		text-align: center;
+		vertical-align: middle;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+	th {
+		text-align: center;
+		vertical-align: bottom;
+	}
+	width: 100%;
+	table-layout: fixed;
+	thead {
+		tr {
+			th {
+				td {
+					white-space: nowrap;
+				}
+			}
+		}
+	}
+	.messageValue {
+		text-align: left;
+		vertical-align: middle;
+	}
+}
+
+.existing-config-table.table-body {
+	width: 100%;
+}
+
+.existing-config-table {
+	.btn-group.btn.btn-default {
+		&:hover {
+			background: transparent;
+			color: $color_1;
+		}
+	}
+}
+
+.btn-group {
+	.btn.btn-default {
+		&:focus {
+			background: transparent;
+			color: $color_1;
+		}
+	}
+}
+
+.add-config-btn {
+	margin: 15px 0 0 0;
+}
+
+.config {
+	.form-group {
+		margin-left: 0px;
+	}
+}
+
+.name {
+	font-weight: 600;
+	font-size: 14px;
+	margin-bottom: 1em;
+}
+
+.team-name {
+	max-width: 138px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.delay {
+	width: 110px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.message {
+	width: 413px;
+}
+
+.include-guests {
+	width: 119px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.option {
+	width: 138px;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.message-content {
+	text-align: left;
+	width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.svg-buttons {
+	&:focus {
+		outline: none;
+		box-shadow: none;
+	}
+	&:active {
+		outline: none;
+		box-shadow: none;
+	}
+}

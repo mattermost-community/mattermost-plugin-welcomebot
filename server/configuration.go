@@ -46,7 +46,7 @@ type ConfigMessage struct {
 
 // Configuration from config.json
 type Configuration struct {
-	WelcomeMessages []*ConfigMessage
+	WelcomeMessages []*ConfigMessage `json:"WelcomeMessages"`
 }
 
 // List of the welcome messages from the configuration
