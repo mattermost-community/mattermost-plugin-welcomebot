@@ -5,8 +5,7 @@
 [![Release](https://img.shields.io/github/v/release/mattermost/mattermost-plugin-welcomebot)](https://github.com/mattermost/mattermost-plugin-welcomebot/releases/latest)
 [![HW](https://img.shields.io/github/issues/mattermost/mattermost-plugin-welcomebot/Up%20For%20Grabs?color=dark%20green&label=Help%20Wanted)](https://github.com/mattermost/mattermost-plugin-welcomebot/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc+label%3A%22Up+For+Grabs%22+label%3A%22Help+Wanted%22)
 
-**Maintainer:** [@jfrerich](https://github.com/jfrerich)
-**Co-Maintainer:** [@iomodo](https://github.com/iomodo)
+**Maintainer:** [@mickmister](https://github.com/mickmister)
 
 Use this plugin to improve onboarding and HR processes. It adds a Welcome Bot that helps welcome users to teams and/or channels as well as easily join channels based on selections.
 
@@ -36,8 +35,9 @@ Edit your `config.json` file with a message you want to send to a user in the fo
             "com.mattermost.welcomebot": {
                 "WelcomeMessages": [
                     {
-                        "TeamName": "your-team-name, your-second-team-name",
+                        "TeamName": "your-team-name",
                         "DelayInSeconds": 3,
+                        "IncludeGuests": false,
                         "Message": [
                             "Your welcome message here. Each list item specifies one line in the message text."
                         ],
@@ -105,7 +105,7 @@ If you see `[Object object]` in the text field, that's because the configuration
 
 ### Reference
 
-- **TeamName**: The teams for which the Welcome Bot sends a message. Must be the team handle used in the URL, in lowercase. For example, in the following URL, the **TeamName** value is `my-team`: https://example.com/my-team/channels/my-channel . In the case of multiple teams, use comma separated fields. For example `"my-team, my-team-2"` to display the same messages for both `my-team` and `my-team-2`
+- **TeamName**: The team for which the Welcome Bot sends a message for. Must be the team handle used in the URL, in lowercase. For example, in the following URL the **TeamName** value is `my-team`: https://example.com/my-team/channels/my-channel
 - **DelayInSeconds**: The number of seconds after joining a team that the user receives a welcome message.
 - **Message**: The message posted to the user.
 - (Optional) **IncludeGuests**: Whether or not to include guest users.
@@ -143,7 +143,7 @@ To accomplish the above, you can specify the following configuration in your `co
             "com.mattermost.welcomebot": {
                 "WelcomeMessages": [
                     {
-                        "TeamName": "staff, management",
+                        "TeamName": "staff",
                         "DelayInSeconds": 5,
                         "Message": [
                             "### Welcome {{.UserDisplayName}} to the Staff {{.Team.DisplayName}} team!",
