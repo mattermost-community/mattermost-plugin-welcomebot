@@ -1,6 +1,6 @@
 package main
 
-import "github.com/mattermost/mattermost-server/v6/model"
+import "github.com/mattermost/mattermost/server/public/model"
 
 // MessageTemplate represents all the data that can be used in the template for a welcomebot message
 type MessageTemplate struct {

@@ -205,10 +205,4 @@ type MessageTemplate struct {
 
 ## Development
 
-This plugin contains a server and webapp portion.
-
-Use `make dist` to build distributions of the plugin that you can upload to a Mattermost server.
-Use `make check-style` to check the style.
-Use `make deploy` to deploy the plugin to your local server.
-
-For additional information on developing plugins, refer to [our plugin developer documentation](https://developers.mattermost.com/extend/plugins/).
+This plugin contains a server portion. Read our documentation about the [Developer Workflow](https://developers.mattermost.com/integrate/plugins/developer-workflow/) and [Developer Setup](https://developers.mattermost.com/integrate/plugins/developer-setup/) for more information about developing and extending plugins.
