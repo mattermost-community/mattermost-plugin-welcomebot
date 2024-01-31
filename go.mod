@@ -1,6 +1,6 @@
 module github.com/mattermost/mattermost-plugin-welcomebot
 
-go 1.18
+go 1.21
 
 require (
 	github.com/mattermost/mattermost/server/public v0.0.12
