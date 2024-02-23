@@ -113,6 +113,7 @@ func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMes
 
 			for _, channelName := range configAction.ChannelsAddedTo {
 				p.joinChannel(action, channelName)
+				time.Sleep(time.Second)
 			}
 		}
 
@@ -200,6 +201,7 @@ func (p *Plugin) processWelcomeMessage(messageTemplate MessageTemplate, configMe
 func (p *Plugin) processActionMessage(messageTemplate MessageTemplate, action *Action, configMessageAction ConfigMessageAction) {
 	for _, channelName := range configMessageAction.ChannelsAddedTo {
 		p.joinChannel(action, channelName)
+		time.Sleep(time.Second)
 	}
 
 	tmpMsg, _ := template.New("Response").Parse(strings.Join(configMessageAction.ActionSuccessfulMessage, "\n"))
