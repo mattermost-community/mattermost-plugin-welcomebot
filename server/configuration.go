@@ -46,8 +46,7 @@ type ConfigMessage struct {
 
 // Configuration from config.json
 type Configuration struct {
-	WelcomeMessages                 []*ConfigMessage
-	AddToChannelDelayInMilliseconds int
+	WelcomeMessages []*ConfigMessage
 }
 
 // List of the welcome messages from the configuration
@@ -63,8 +62,6 @@ func (p *Plugin) OnConfigurationChange() error {
 		p.API.LogError(err.Error())
 		return err
 	}
-
-	p.conf = c
 
 	p.welcomeMessages.Store(c.WelcomeMessages)
 

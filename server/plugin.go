@@ -25,8 +25,6 @@ type Plugin struct {
 
 	welcomeMessages atomic.Value
 
-	conf Configuration
-
 	// botUserID of the created bot account.
 	botUserID string
 }

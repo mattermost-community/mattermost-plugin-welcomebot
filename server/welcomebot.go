@@ -113,6 +113,7 @@ func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMes
 
 			for _, channelName := range configAction.ChannelsAddedTo {
 				p.joinChannel(action, channelName)
+				time.Sleep(time.Second)
 			}
 		}
 
@@ -200,6 +201,7 @@ func (p *Plugin) processWelcomeMessage(messageTemplate MessageTemplate, configMe
 func (p *Plugin) processActionMessage(messageTemplate MessageTemplate, action *Action, configMessageAction ConfigMessageAction) {
 	for _, channelName := range configMessageAction.ChannelsAddedTo {
 		p.joinChannel(action, channelName)
+		time.Sleep(time.Second)
 	}
 
 	tmpMsg, _ := template.New("Response").Parse(strings.Join(configMessageAction.ActionSuccessfulMessage, "\n"))
@@ -233,8 +235,6 @@ func (p *Plugin) joinChannel(action *Action, channelName string) {
 			p.API.LogError("Couldn't add user to the channel, continuing to next channel", "user_id", action.Context.UserID, "channel_id", channel.Id)
 			return
 		}
-
-		time.Sleep(time.Millisecond * time.Duration(p.conf.AddToChannelDelayInMilliseconds))
 	} else {
 		p.API.LogError("failed to get channel, continuing to the next channel", "channel_name", channelName, "user_id", action.Context.UserID)
 	}
