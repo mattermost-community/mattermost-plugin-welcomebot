@@ -236,7 +236,6 @@ func (p *Plugin) joinChannel(action *Action, channelName string) {
 		if err := p.handleDMs(action, channelName); err != nil {
 			p.API.LogError("failed to handle DM channel, continuing to next channel. " + err.Error())
 		}
-
 	} else { // Otherwise treat it like a normal channel
 		if channel, err := p.API.GetChannelByName(action.Context.TeamID, channelName, false); err == nil {
 			if _, err := p.API.AddChannelMember(channel.Id, action.Context.UserID); err != nil {
