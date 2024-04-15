@@ -122,9 +122,9 @@ func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMes
 				Name: configAction.ActionDisplayName,
 				Integration: &model.PostActionIntegration{
 					Context: map[string]interface{}{
-						"action":  configAction.ActionName,
-						"team_id": messageTemplate.Team.Id,
-						"user_id": messageTemplate.User.Id,
+						"action":              configAction.ActionName,
+						"team_id":             messageTemplate.Team.Id,
+						"user_id":             messageTemplate.User.Id,
 						"direct_message_post": configAction.ActionDirectMessagePost,
 					},
 					URL: fmt.Sprintf("%v/plugins/%v/addchannels", p.getSiteURL(), manifest.ID),
@@ -234,7 +234,7 @@ func (p *Plugin) joinChannel(action *Action, channelName string) {
 	if strings.HasPrefix(channelName, "@") {
 		r := []rune(channelName)
 		dmUser, userErr := p.API.GetUserByUsername(string(r[1:]))
-	
+
 		if userErr != nil {
 			p.API.LogError("Couldn't find DM user, continuing to next channel", "channelName", channelName)
 			return
@@ -244,18 +244,18 @@ func (p *Plugin) joinChannel(action *Action, channelName string) {
 			p.API.LogError("Specified DM user is not a bot, continuing to next channel", "channelName", channelName)
 			return
 		}
-		
+
 		dmChannel, err := p.API.GetDirectChannel(dmUser.Id, action.Context.UserID)
 
 		if err != nil {
 			p.API.LogError("Couldn't create or get DM channel, continuing to next channel", "user_id", action.Context.UserID, "channelName", channelName, "channel_id", dmChannel.Id)
 			return
 		}
-		
+
 		dmMessage := "Welcome to the team!"
 		if len(action.Context.DirectMessagePost) != 0 {
 			dmMessage = action.Context.DirectMessagePost
-		}			
+		}
 
 		post := &model.Post{
 			Message:   dmMessage,
