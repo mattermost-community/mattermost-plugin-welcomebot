@@ -109,6 +109,7 @@ func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMes
 			action.Context = &ActionContext{}
 			action.Context.TeamID = messageTemplate.Team.Id
 			action.Context.UserID = messageTemplate.User.Id
+			action.Context.DirectMessagePost = configAction.ActionDirectMessagePost
 			action.Context.Action = "automatic"
 
 			for _, channelName := range configAction.ChannelsAddedTo {
@@ -124,6 +125,7 @@ func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMes
 						"action":  configAction.ActionName,
 						"team_id": messageTemplate.Team.Id,
 						"user_id": messageTemplate.User.Id,
+						"direct_message_post": configAction.ActionDirectMessagePost,
 					},
 					URL: fmt.Sprintf("%v/plugins/%v/addchannels", p.getSiteURL(), manifest.ID),
 				},
@@ -228,12 +230,55 @@ func (p *Plugin) processActionMessage(messageTemplate MessageTemplate, action *A
 }
 
 func (p *Plugin) joinChannel(action *Action, channelName string) {
-	if channel, err := p.API.GetChannelByName(action.Context.TeamID, channelName, false); err == nil {
-		if _, err := p.API.AddChannelMember(channel.Id, action.Context.UserID); err != nil {
-			p.API.LogError("Couldn't add user to the channel, continuing to next channel", "user_id", action.Context.UserID, "channel_id", channel.Id)
+	// If it begins with @ create a DM channel
+	if strings.HasPrefix(channelName, "@") {
+		r := []rune(channelName)
+		dmUser, userErr := p.API.GetUserByUsername(string(r[1:]))
+	
+		if userErr != nil {
+			p.API.LogError("Couldn't find DM user, continuing to next channel", "channelName", channelName)
 			return
 		}
-	} else {
-		p.API.LogError("failed to get channel, continuing to the next channel", "channel_name", channelName, "user_id", action.Context.UserID)
+
+		if !dmUser.IsBot {
+			p.API.LogError("Specified DM user is not a bot, continuing to next channel", "channelName", channelName)
+			return
+		}
+		
+		dmChannel, err := p.API.GetDirectChannel(dmUser.Id, action.Context.UserID)
+
+		if err != nil {
+			p.API.LogError("Couldn't create or get DM channel, continuing to next channel", "user_id", action.Context.UserID, "channelName", channelName, "channel_id", dmChannel.Id)
+			return
+		}
+		
+		dmMessage := "Welcome to the team!"
+		if len(action.Context.DirectMessagePost) != 0 {
+			dmMessage = action.Context.DirectMessagePost
+		}			
+
+		post := &model.Post{
+			Message:   dmMessage,
+			ChannelId: dmChannel.Id,
+			UserId:    dmUser.Id,
+		}
+
+		if _, err := p.API.CreatePost(post); err != nil {
+			p.API.LogError(
+				"Could not create direct message post",
+				"user_id", post.UserId,
+				"err", err.Error(),
+			)
+		}
+	} else { // Otherwise treat it like a normal channel
+		if channel, err := p.API.GetChannelByName(action.Context.TeamID, channelName, false); err == nil {
+			if _, err := p.API.AddChannelMember(channel.Id, action.Context.UserID); err != nil {
+				p.API.LogError("Couldn't add user to the channel, continuing to next channel", "channel_name", channelName, "user_id", action.Context.UserID, channel.Id)
+				return
+			}
+		} else {
+			p.API.LogError("failed to get channel, continuing to the next channel", "channel_name", channelName, "user_id", action.Context.UserID)
+			return
+		}
 	}
 }

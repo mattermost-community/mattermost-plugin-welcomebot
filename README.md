@@ -31,38 +31,39 @@ Use this plugin to improve onboarding and HR processes. It adds a Welcome Bot th
 To configure the Welcome Bot, edit your `config.json` file with a message you want to send to a user in the following format:
 
 ```
-        "Plugins": {
-            "com.mattermost.welcomebot": {
-                "WelcomeMessages": [
+"Plugins": {
+    "com.mattermost.welcomebot": {
+        "WelcomeMessages": [
+            {
+                "TeamName": "your-team-name",
+                "DelayInSeconds": 3,
+                "Message": [
+                    "Your welcome message here. Each list item specifies one line in the message text."
+                ],
+                "AttachmentMessage": [
+                    "Attachment message containing user actions"
+                ],
+                "Actions" : [
                     {
-                        "TeamName": "your-team-name",
-                        "DelayInSeconds": 3,
-                        "IncludeGuests": false,
-                        "Message": [
-                            "Your welcome message here. Each list item specifies one line in the message text."
+                        "ActionType": "button",
+                        "ActionDisplayName": "User Action",
+                        "ActionName": "action-name",
+                        "ActionDirectMessagePost": "Message send to new direct messages",
+                        "ActionSuccessfulMessage": [
+                            "Message posted after the user takes this action and joins channels specified by 'ChannelsAddedTo'."
                         ],
-                        "AttachmentMessage": [
-                            "Attachment message containing user actions"
-                        ],
-                        "Actions" : [
-                            {
-                                "ActionType": "button",
-                                "ActionDisplayName": "User Action",
-                                "ActionName": "action-name",
-                                "ActionSuccessfulMessage": [
-                                    "Message posted after the user takes this action and joins channels specified by 'ChannelsAddedTo'."
-                                ],
-                                "ChannelsAddedTo": ["channel-1", "channel-2"]
-                            },
-                            {
-                                "ActionType": "automatic",
-                                "ChannelsAddedTo": ["channel-3", "channel-4"]
-                            }
-                        ]
+                        "ChannelsAddedTo": ["channel-1", "channel-2", "@example-bot"]
+                    },
+                    {
+                        "ActionType": "automatic",
+                        "ActionDirectMessagePost": "Message send to new direct messages",
+                        "ChannelsAddedTo": ["channel-3", "channel-4", "@another-bot"]
                     }
                 ]
             }
-        },
+        ]
+    }
+},
 ```
 
 where
@@ -78,6 +79,7 @@ where
     - **ActionName**: Sets the action name used by the plugin to identify which action is taken by a user.
     - **ActionSuccessfulMessage**: Message posted after the user takes this action and joins the specified channels.
     - **ChannelsAddedTo**: List of channel names the user is added to. Must be the channel handle used in the URL, in lowercase. For example, in the following URL the **channel name** value is `my-channel`: https://example.com/my-team/channels/my-channel
+    - **ActionDirectMessagePost**: The post to send users when creating the bot direct message channel
 
 The preview of the configured messages, as well as the creation of a channel welcome message, can be done via bot commands:
 * `/welcomebot help` - Displays usage information.

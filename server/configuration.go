@@ -19,6 +19,9 @@ type ConfigMessageAction struct {
 	// The message that's display after this action was successful
 	ActionSuccessfulMessage []string
 
+	// The message that is posted to direct message channels
+	ActionDirectMessagePost string
+
 	// The names of the channels that a users should be added to
 	ChannelsAddedTo []string
 }
