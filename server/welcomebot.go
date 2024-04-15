@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-server/v6/model"
+	"github.com/pkg/errors"
 )
 
 func (p *Plugin) constructMessageTemplate(userID, teamID string) *MessageTemplate {
@@ -232,44 +233,10 @@ func (p *Plugin) processActionMessage(messageTemplate MessageTemplate, action *A
 func (p *Plugin) joinChannel(action *Action, channelName string) {
 	// If it begins with @ create a DM channel
 	if strings.HasPrefix(channelName, "@") {
-		r := []rune(channelName)
-		dmUser, userErr := p.API.GetUserByUsername(string(r[1:]))
-
-		if userErr != nil {
-			p.API.LogError("Couldn't find DM user, continuing to next channel", "channelName", channelName)
-			return
+		if err := p.handleDMs(action,channelName); err != nil {
+			p.API.LogError("failed to handle DM channel, continuing to next channel. " + err.Error())
 		}
 
-		if !dmUser.IsBot {
-			p.API.LogError("Specified DM user is not a bot, continuing to next channel", "channelName", channelName)
-			return
-		}
-
-		dmChannel, err := p.API.GetDirectChannel(dmUser.Id, action.Context.UserID)
-
-		if err != nil {
-			p.API.LogError("Couldn't create or get DM channel, continuing to next channel", "user_id", action.Context.UserID, "channelName", channelName, "channel_id", dmChannel.Id)
-			return
-		}
-
-		dmMessage := "Welcome to the team!"
-		if len(action.Context.DirectMessagePost) != 0 {
-			dmMessage = action.Context.DirectMessagePost
-		}
-
-		post := &model.Post{
-			Message:   dmMessage,
-			ChannelId: dmChannel.Id,
-			UserId:    dmUser.Id,
-		}
-
-		if _, err := p.API.CreatePost(post); err != nil {
-			p.API.LogError(
-				"Could not create direct message post",
-				"user_id", post.UserId,
-				"err", err.Error(),
-			)
-		}
 	} else { // Otherwise treat it like a normal channel
 		if channel, err := p.API.GetChannelByName(action.Context.TeamID, channelName, false); err == nil {
 			if _, err := p.API.AddChannelMember(channel.Id, action.Context.UserID); err != nil {
@@ -281,4 +248,38 @@ func (p *Plugin) joinChannel(action *Action, channelName string) {
 			return
 		}
 	}
+}
+
+func (p *Plugin) handleDMs(action *Action, channelName string) error {
+	username := channelName[1:]
+	dmUser, userErr := p.API.GetUserByUsername(username)
+	if userErr != nil {
+		return errors.Wrapf(userErr, "couldn't find DM channel for username %s", username)
+	}
+
+	if !dmUser.IsBot {
+		return errors.Wrapf(userErr, "Specified DM user is not a bot for username %s", username)
+	}
+
+	dmChannel, err := p.API.GetDirectChannel(dmUser.Id, action.Context.UserID)
+	if err != nil {
+		return errors.Wrapf(err, "Couldn't create or get DM channel for user_id %s and channel_id %s" , action.Context.UserID, dmChannel.Id)
+	}
+
+	dmMessage := "Welcome to the team!"
+	if len(action.Context.DirectMessagePost) != 0 {
+		dmMessage = action.Context.DirectMessagePost
+	}
+
+	post := &model.Post{
+		Message:   dmMessage,
+		ChannelId: dmChannel.Id,
+		UserId:    dmUser.Id,
+	}
+
+	if _, err := p.API.CreatePost(post); err != nil {
+		return errors.Wrapf(err, "Could not create direct message for user_id %s", post.UserId)
+	}
+
+	return nil
 }
