@@ -233,7 +233,7 @@ func (p *Plugin) processActionMessage(messageTemplate MessageTemplate, action *A
 func (p *Plugin) joinChannel(action *Action, channelName string) {
 	// If it begins with @ create a DM channel
 	if strings.HasPrefix(channelName, "@") {
-		if err := p.handleDMs(action,channelName); err != nil {
+		if err := p.handleDMs(action, channelName); err != nil {
 			p.API.LogError("failed to handle DM channel, continuing to next channel. " + err.Error())
 		}
 
@@ -263,7 +263,7 @@ func (p *Plugin) handleDMs(action *Action, channelName string) error {
 
 	dmChannel, err := p.API.GetDirectChannel(dmUser.Id, action.Context.UserID)
 	if err != nil {
-		return errors.Wrapf(err, "Couldn't create or get DM channel for user_id %s and channel_id %s" , action.Context.UserID, dmChannel.Id)
+		return errors.Wrapf(err, "Couldn't create or get DM channel for user_id %s and channel_id %s", action.Context.UserID, dmChannel.Id)
 	}
 
 	dmMessage := "Welcome to the team!"
