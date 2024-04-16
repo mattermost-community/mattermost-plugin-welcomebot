@@ -203,6 +203,17 @@ type MessageTemplate struct {
 }
 ```
 
+<!-- ## How to Dynamically Assign Team Messages
+
+This plugin also allows system admins and team admins to change the team message of an appropriate team through a slash command, rather than adjusting the config.json. 
+
+We have provided three options that are formatted identically to the channel welcomes:
+- `/welcomebot get_team_welcome` - prints the current team's welcome message if either the dynamic message exists, or the config.json message exists.
+- `/welcomebot set_team_welcome [welcome message]` - sets the current team's welcome message to the one defined in the slash command.
+- `/welcomebot delete_team_welcome` - deletes the current team's welcome message. This however does NOT delete any messages set inside of the config.json.
+
+For saving these messages, they are stored as KV pairs. Team message pairs have the prefix `teammsg_<team_id>` to distinguish them from the `chanmsg_<channel_id>` pairs. -->
+
 ## Development
 
 This plugin contains a server and webapp portion.

@@ -1,5 +1,11 @@
 package main
 
+import (
+	"fmt"
+
+	"github.com/mattermost/mattermost-server/v5/model"
+)
+
 const (
 	actionTypeAutomatic = "automatic"
 	actionTypeButton    = "button"
@@ -66,4 +72,14 @@ func (p *Plugin) OnConfigurationChange() error {
 	p.welcomeMessages.Store(c.WelcomeMessages)
 
 	return nil
+}
+
+// Takes a teamID to construct the correct key, and then retrieve the necessary value from the pair stored in the DB
+func (p *Plugin) GetTeamWelcomeMessageFromKV(teamID string) ([]byte, *model.AppError) {
+	key := makeTeamWelcomeMessageKey(teamID)
+	return p.API.KVGet(key)
+}
+
+func makeTeamWelcomeMessageKey(teamID string) string {
+	return fmt.Sprintf("%s%s", welcomebotTeamWelcomeKey, teamID)
 }
