@@ -61,7 +61,7 @@ func (p *Plugin) hasSysadminRole(userID string) (bool, error) {
 	if appErr != nil {
 		return false, appErr
 	}
-	if !strings.Contains(user.Roles, model.PERMISSIONS_SYSTEM_ADMIN) {
+	if !strings.Contains(user.Roles, model.PermissionsSystemAdmin) {
 		return false, nil
 	}
 	return true, nil
@@ -72,7 +72,7 @@ func (p *Plugin) hasTeamAdminRole(userID string, teamID string) (bool, error) {
 	if appErr != nil {
 		return false, appErr
 	}
-	if !strings.Contains(teamMember.Roles, model.PERMISSIONS_TEAM_ADMIN) {
+	if !strings.Contains(teamMember.Roles, model.PermissionsTeamAdmin) {
 		return false, nil
 	}
 	return true, nil
@@ -83,7 +83,7 @@ func (p *Plugin) hasChannelAdminRole(userID string, channelID string) (bool, err
 	if appErr != nil {
 		return false, appErr
 	}
-	if !strings.Contains(channelMember.Roles, model.PERMISSIONS_CHANNEL_ADMIN) {
+	if !strings.Contains(channelMember.Roles, model.PermissionsChannelAdmin) {
 		return false, nil
 	}
 	return true, nil
@@ -280,7 +280,7 @@ func (p *Plugin) executeCommandSetWelcome(args *model.CommandArgs) {
 		return
 	}
 
-	if channelInfo.Type == model.CHANNEL_PRIVATE {
+	if channelInfo.Type == model.ChannelTypePrivate {
 		p.postCommandResponse(args, "welcome messages are not supported for direct channels")
 		return
 	}
