@@ -45,6 +45,37 @@ func (p *Plugin) constructMessageTemplate(userID, teamID string) *MessageTemplat
 	return data
 }
 
+func (p *Plugin) constructChannelMessageTemplate(userID, channelID string) *ChannelMessageTemplate {
+	data := &ChannelMessageTemplate{}
+	var err *model.AppError
+
+	if len(userID) > 0 {
+		if data.User, err = p.API.GetUser(userID); err != nil {
+			p.API.LogError("failed to query user", "UserID", userID)
+			return nil
+		}
+	}
+
+	if data.User != nil {
+		if data.DirectMessage, err = p.API.GetDirectChannel(userID, p.botUserID); err != nil {
+			p.API.LogError("failed to query direct message channel", "UserID", userID)
+			return nil
+		}
+	}
+
+	if len(channelID) > 0 {
+		data.Channel, err = p.API.GetChannel(channelID)
+		if err != nil {
+			p.API.LogError("failed to query channel", "ChannelID", channelID)
+			return nil
+		}
+	}
+
+	data.UserDisplayName = data.User.GetDisplayName(model.ShowNicknameFullName)
+
+	return data
+}
+
 func (p *Plugin) getSiteURL() string {
 	siteURL := "http://localhost:8065"
 
@@ -133,18 +164,10 @@ func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMes
 		}
 	}
 
-	tmpMsg, _ := template.New("Response").Parse(strings.Join(configMessage.Message, "\n"))
-	var message bytes.Buffer
-	err := tmpMsg.Execute(&message, messageTemplate)
-	if err != nil {
-		p.API.LogError(
-			"Failed to execute message template",
-			"err", err.Error(),
-		)
-	}
+	message := p.getTemplateMessage(configMessage.Message, messageTemplate)
 
 	post := &model.Post{
-		Message: message.String(),
+		Message: message,
 		UserId:  p.botUserID,
 	}
 
@@ -175,6 +198,17 @@ func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMes
 	}
 
 	return post
+}
+
+func (p *Plugin) getTemplateMessage(data []string, messageTemplate interface{}) string {
+	tmpMsg, _ := template.New("Response").Parse(strings.Join(data, "\n"))
+	var message bytes.Buffer
+	if appErr := tmpMsg.Execute(&message, messageTemplate); appErr != nil {
+		p.API.LogError("Failed to execute channel message template", "Error", appErr.Error())
+		return ""
+	}
+
+	return message.String()
 }
 
 func (p *Plugin) processWelcomeMessage(messageTemplate MessageTemplate, configMessage ConfigMessage) {

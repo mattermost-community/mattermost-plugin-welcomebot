@@ -11,3 +11,11 @@ type MessageTemplate struct {
 	DirectMessage   *model.Channel
 	UserDisplayName string
 }
+
+type ChannelMessageTemplate struct {
+	WelcomeBot      *model.User
+	User            *model.User
+	Channel         *model.Channel
+	DirectMessage   *model.Channel
+	UserDisplayName string
+}

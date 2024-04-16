@@ -83,7 +83,15 @@ The preview of the configured messages, as well as the creation of a channel wel
 * `/welcomebot help` - Displays usage information.
 * `/welcomebot list` - Lists the teams for which greetings were defined.
 * `/welcomebot preview [team-name]` - Sends ephemeral messages to the user calling the command, with the preview of the welcome message[s] for the given team name and the user that requested the preview.
-* `/welcomebot set_channel_welcome [welcome-message]` - Sets the given text as current's channel welcome message.
+* `/welcomebot set_channel_welcome [welcome-message]` - Sets the given text as current's channel welcome message. You can also include `{{.UserDisplayName}}` and `{{.Channel.DisplayName}}` in the command to print the user joined and the channel display name in the message, respectively. You can insert any variable from the `MessageTemplate` struct, which has the following fields:
+    ```go
+    type MessageTemplate struct {
+        WelcomeBot      *model.User
+        User            *model.User
+        DirectMessage   *model.Channel
+        UserDisplayName string
+    }
+    ```
 * `/welcomebot get_channel_welcome` - Gets the current channel's welcome message.
 * `/welcomebot delete_channel_welcome` - Deletes the current channel's welcome message.
 
