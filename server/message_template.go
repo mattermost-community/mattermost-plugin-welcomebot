@@ -11,3 +11,11 @@ type MessageTemplate struct {
 	DirectMessage   *model.Channel
 	UserDisplayName string
 }
+
+// GloablMessageTemplate represents all the data that can be used in the template for a welcomebot global message
+type GloablMessageTemplate struct {
+	WelcomeBot      *model.User
+	User            *model.User
+	DirectMessage   *model.Channel
+	UserDisplayName string
+}

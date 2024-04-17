@@ -1,13 +1,51 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"html/template"
+	"strings"
 	"time"
 
 	"github.com/mattermost/mattermost-server/v6/model"
 	"github.com/mattermost/mattermost-server/v6/plugin"
 	"github.com/mattermost/mattermost-server/v6/shared/mlog"
 )
+
+// UserHasBeenCreated is invoked after a user was created.
+func (p *Plugin) UserHasBeenCreated(c *plugin.Context, user *model.User) {
+	data := p.constructGlobalMessageTemplate(user.Id)
+	if data == nil {
+		return
+	}
+
+	for _, message := range p.getWelcomeMessages() {
+		if data.User.IsGuest() && !message.IncludeGuests {
+			continue
+		}
+
+		if len(message.GlobalWelcomeMessage) > 0 {
+			tmpMsg, _ := template.New("Response").Parse(strings.Join(message.GlobalWelcomeMessage, "\n"))
+			var message bytes.Buffer
+			err := tmpMsg.Execute(&message, data)
+			if err != nil {
+				p.API.LogError("Failed to execute message template", "Error", err.Error())
+			}
+
+			post := &model.Post{
+				Message:   message.String(),
+				UserId:    p.botUserID,
+				ChannelId: data.DirectMessage.Id,
+			}
+
+			if _, err := p.API.CreatePost(post); err != nil {
+				p.API.LogError("We could not create the response post", "UserID", post.UserId, "Error", err.Error())
+			}
+
+			return
+		}
+	}
+}
 
 // UserHasJoinedTeam is invoked after the membership has been committed to the database. If
 // actor is not nil, the user was added to the team by the actor.
@@ -22,7 +60,7 @@ func (p *Plugin) UserHasJoinedTeam(c *plugin.Context, teamMember *model.TeamMemb
 			continue
 		}
 
-		if message.TeamName == data.Team.Name {
+		if message.TeamName == data.Team.Name && len(message.GlobalWelcomeMessage) == 0 {
 			go p.processWelcomeMessage(*data, *message)
 		}
 	}

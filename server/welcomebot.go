@@ -45,6 +45,29 @@ func (p *Plugin) constructMessageTemplate(userID, teamID string) *MessageTemplat
 	return data
 }
 
+func (p *Plugin) constructGlobalMessageTemplate(userID string) *GloablMessageTemplate {
+	data := &GloablMessageTemplate{}
+	var err *model.AppError
+
+	if len(userID) > 0 {
+		if data.User, err = p.API.GetUser(userID); err != nil {
+			p.API.LogError("failed to query user", "user_id", userID)
+			return nil
+		}
+	}
+
+	if data.User != nil {
+		if data.DirectMessage, err = p.API.GetDirectChannel(userID, p.botUserID); err != nil {
+			p.API.LogError("failed to query direct message channel", "user_id", userID)
+			return nil
+		}
+	}
+
+	data.UserDisplayName = data.User.GetDisplayName(model.ShowNicknameFullName)
+
+	return data
+}
+
 func (p *Plugin) getSiteURL() string {
 	siteURL := "http://localhost:8065"
 

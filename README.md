@@ -78,6 +78,7 @@ where
     - **ActionName**: Sets the action name used by the plugin to identify which action is taken by a user.
     - **ActionSuccessfulMessage**: Message posted after the user takes this action and joins the specified channels.
     - **ChannelsAddedTo**: List of channel names the user is added to. Must be the channel handle used in the URL, in lowercase. For example, in the following URL the **channel name** value is `my-channel`: https://example.com/my-team/channels/my-channel
+- **GlobalWelcomeMessage**: The welcome message to send globally to a new user from the Welcome Bot. Adding this field will ignore the `TeamName`, `Message`, `AttachmentMessage` and `Actions` fields in the config to post a global message, irrespective of the team the user is part of.
 
 The preview of the configured messages, as well as the creation of a channel welcome message, can be done via bot commands:
 * `/welcomebot help` - Displays usage information.
@@ -179,6 +180,12 @@ To accomplish the above, you can specify the following configuration in your `co
                                 "ChannelsAddedTo": ["escalation-process", "incidents"]
                             }
                         ]
+                    },
+                    {
+                        "DelayInSeconds": 5,
+                        "GlobalWelcomeMessage": [
+                            "### Welcome {{.UserDisplayName}} to the Mattermost!",
+                        ],
                     }
                 ]
             }
