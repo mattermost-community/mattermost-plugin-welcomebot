@@ -591,11 +591,11 @@ func getAutocompleteData() *model.AutocompleteData {
 	welcomebot.AddCommand(setChannelWelcome)
 
 	getChannelWelcome := model.NewAutocompleteData("get_channel_welcome", "", "Print the welcome message set for the channel")
-	getChannelWelcome.AddTextArgument("Name of the channel to get welcome message", "[channel-name]", "")
+	getChannelWelcome.AddTextArgument("Channel name to get welcome message", "[channel-name]", "")
 	welcomebot.AddCommand(getChannelWelcome)
 
 	deleteChannelWelcome := model.NewAutocompleteData("delete_channel_welcome", "", "Delete the welcome message for the channel")
-	deleteChannelWelcome.AddTextArgument("Name of the channel to delete welcome message", "[channel-name]", "")
+	deleteChannelWelcome.AddTextArgument("Channel name to delete welcome message", "[channel-name]", "")
 	welcomebot.AddCommand(deleteChannelWelcome)
 
 	setTeamWelcome := model.NewAutocompleteData(commandTriggerSetTeamWelcome, "[welcome-message]", "Set the welcome message for the team")
@@ -603,11 +603,11 @@ func getAutocompleteData() *model.AutocompleteData {
 	welcomebot.AddCommand(setTeamWelcome)
 
 	getTeamWelcome := model.NewAutocompleteData(commandTriggerGetTeamWelcome, "", "Print the welcome message for the team")
-	getTeamWelcome.AddTextArgument("Name of the team to get welcome message", "[team-name]", "")
+	getTeamWelcome.AddTextArgument("Team name to get welcome message", "[team-name]", "")
 	welcomebot.AddCommand(getTeamWelcome)
 
 	deleteTeamWelcome := model.NewAutocompleteData(commandTriggerDeleteTeamWelcome, "", "Delete the welcome message for the team. Configuration based messages are not affected by this.")
-	deleteTeamWelcome.AddTextArgument("Name of the team to delete welcome message", "[team-name]", "")
+	deleteTeamWelcome.AddTextArgument("Team name to delete welcome message", "[team-name]", "")
 	welcomebot.AddCommand(deleteTeamWelcome)
 
 	return welcomebot
