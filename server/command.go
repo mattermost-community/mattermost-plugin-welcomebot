@@ -3,11 +3,13 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 
 	"github.com/mattermost/mattermost-server/v6/model"
 	"github.com/mattermost/mattermost-server/v6/plugin"
+	"github.com/mattermost/mattermost-server/v6/shared/mlog"
 )
 
 const commandHelp = `* |/welcomebot preview [team-name] | - preview the welcome message for the given team name. The current user's username will be used to render the template.
@@ -15,7 +17,7 @@ const commandHelp = `* |/welcomebot preview [team-name] | - preview the welcome 
 * |/welcomebot set_channel_welcome [welcome-message]| - set the welcome message for the given channel. Direct channels are not supported.
 * |/welcomebot get_channel_welcome| - print the welcome message set for the given channel (if any)
 * |/welcomebot delete_channel_welcome| - delete the welcome message for the given channel (if any)
-* |/welcomebot set_team_welcome [welcome-message]| - set a brief text welcome message for your given team.
+* |/welcomebot set_team_welcome [welcome-message]| - set a brief welcome message for your current team.
 * |/welcomebot get_team_welcome| - print the welcome message set for the given team (if any)
 * |/welcomebot delete_team_welcome| - delete the dynamic welcome message for the given team (if any)
 `
@@ -141,13 +143,20 @@ func (p *Plugin) validateCommand(action string, parameters []string) string {
 }
 
 func (p *Plugin) validatePreviewPrivileges(teamID string, args *model.CommandArgs) (bool, error) {
-	_, teamMemberErr := p.API.GetTeamMember(teamID, args.UserId)
-	if teamMemberErr != nil {
-		if teamMemberErr.StatusCode == 404 {
+	if _, teamMemberErr := p.API.GetTeamMember(teamID, args.UserId); teamMemberErr != nil {
+		if teamMemberErr.StatusCode == http.StatusNotFound {
 			p.postCommandResponse(args, "You are not a member of that team.")
+			mlog.Error("The user is not a member of the team",
+				mlog.String("userId", args.UserId),
+				mlog.String("teamId", teamID),
+			)
 			return false, teamMemberErr
 		}
 		p.postCommandResponse(args, "error occurred while getting the Team Admin Role `%s`: `%s`", teamID, teamMemberErr)
+		mlog.Error("error occurred while getting the Team Admin Role",
+			mlog.String("teamId", teamID),
+			mlog.Err(teamMemberErr),
+		)
 		return false, teamMemberErr
 	}
 	doesUserHavePrivileges := p.isSystemOrTeamAdmin(args, args.UserId, teamID)
@@ -158,12 +167,11 @@ func (p *Plugin) validatePreviewPrivileges(teamID string, args *model.CommandArg
 // checks if the user has System or Team Admin access to the given team
 func (p *Plugin) isSystemOrTeamAdmin(args *model.CommandArgs, userID string, teamID string) bool {
 	isSysadmin, sysAdminError := p.hasSysadminRole(userID)
-	isTeamAdmin, teamAdminError := p.hasTeamAdminRole(userID, teamID)
-
 	if sysAdminError != nil {
 		p.postCommandResponse(args, "error occurred while getting the System Admin Role: `%s`", sysAdminError)
 		return false
 	}
+	isTeamAdmin, teamAdminError := p.hasTeamAdminRole(userID, teamID)
 	if teamAdminError != nil {
 		p.postCommandResponse(args, "error occurred while getting the Team Admin Role `%s`: `%s`", teamID, teamAdminError)
 		return false
@@ -179,7 +187,7 @@ func (p *Plugin) isSystemOrTeamAdmin(args *model.CommandArgs, userID string, tea
 func (p *Plugin) getTeamKVWelcomeMessagesMap(args *model.CommandArgs) map[string]string {
 	teamsList, teamErr := p.API.GetTeams()
 	if teamErr != nil {
-		p.postCommandResponse(args, "Error occurred while getting list of teams: %s", teamErr)
+		p.postCommandResponse(args, "Error occurred while getting list of the teams: %s", teamErr)
 		return make(map[string]string)
 	}
 
@@ -208,7 +216,11 @@ func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs)
 	}
 	teamID := team.Id
 
-	validPrivileges, _ := p.validatePreviewPrivileges(teamID, args)
+	validPrivileges, nerr := p.validatePreviewPrivileges(teamID, args)
+	if nerr != nil {
+		p.postCommandResponse(args, "error occurred while retrieving the welcome message for the team: `%s`", nerr)
+		return
+	}
 	if !validPrivileges {
 		return
 	}
@@ -226,7 +238,7 @@ func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs)
 		for _, message := range p.getWelcomeMessages() {
 			if message.TeamName == teamName {
 				if err := p.previewWelcomeMessage(teamName, args, *message); err != nil {
-					p.postCommandResponse(args, "error occurred while processing greeting for team `%s`: `%s`", teamName, err)
+					p.postCommandResponse(args, "error occurred while processing the greeting for the team `%s`: `%s`", teamName, err)
 					return
 				}
 				found = true
@@ -248,13 +260,13 @@ func (p *Plugin) executeCommandList(args *model.CommandArgs) {
 		return
 	}
 	if !isSysadmin {
-		p.postCommandResponse(args, "Only a System Admin can view all teams with welcome messages.")
+		p.postCommandResponse(args, "only a System Admin can view all welcome messages of teams.")
 		return
 	}
 
 	welcomeMessagesFromConfig := p.getWelcomeMessages()
-	welcomeMessagesFromKVsMap := p.getTeamKVWelcomeMessagesMap(args)
-	if len(welcomeMessagesFromConfig) == 0 && len(welcomeMessagesFromKVsMap) == 0 {
+	welcomeMessagesFromKVSMap := p.getTeamKVWelcomeMessagesMap(args)
+	if len(welcomeMessagesFromConfig) == 0 && len(welcomeMessagesFromKVSMap) == 0 {
 		p.postCommandResponse(args, "There are no welcome messages defined")
 		return
 	}
@@ -266,7 +278,7 @@ func (p *Plugin) executeCommandList(args *model.CommandArgs) {
 	}
 
 	var str strings.Builder
-	teamsWithWelcomeMessages := p.getUniqueTeamsWithWelcomeMsgSlice(teams, welcomeMessagesFromKVsMap)
+	teamsWithWelcomeMessages := p.getUniqueTeamsWithWelcomeMsgSlice(teams, welcomeMessagesFromKVSMap)
 	for _, team := range teamsWithWelcomeMessages {
 		str.WriteString(fmt.Sprintf("\n * %s", team))
 	}
@@ -579,9 +591,11 @@ func getAutocompleteData() *model.AutocompleteData {
 	welcomebot.AddCommand(setChannelWelcome)
 
 	getChannelWelcome := model.NewAutocompleteData("get_channel_welcome", "", "Print the welcome message set for the channel")
+	getChannelWelcome.AddTextArgument("Name of the channel to get welcome message", "[channel-name]", "")
 	welcomebot.AddCommand(getChannelWelcome)
 
 	deleteChannelWelcome := model.NewAutocompleteData("delete_channel_welcome", "", "Delete the welcome message for the channel")
+	deleteChannelWelcome.AddTextArgument("Name of the channel to delete welcome message", "[channel-name]", "")
 	welcomebot.AddCommand(deleteChannelWelcome)
 
 	setTeamWelcome := model.NewAutocompleteData(commandTriggerSetTeamWelcome, "[welcome-message]", "Set the welcome message for the team")
@@ -589,9 +603,11 @@ func getAutocompleteData() *model.AutocompleteData {
 	welcomebot.AddCommand(setTeamWelcome)
 
 	getTeamWelcome := model.NewAutocompleteData(commandTriggerGetTeamWelcome, "", "Print the welcome message for the team")
+	getTeamWelcome.AddTextArgument("Name of the team to get welcome message", "[team-name]", "")
 	welcomebot.AddCommand(getTeamWelcome)
 
 	deleteTeamWelcome := model.NewAutocompleteData(commandTriggerDeleteTeamWelcome, "", "Delete the welcome message for the team. Configuration based messages are not affected by this.")
+	deleteTeamWelcome.AddTextArgument("Name of the team to delete welcome message", "[team-name]", "")
 	welcomebot.AddCommand(deleteTeamWelcome)
 
 	return welcomebot
