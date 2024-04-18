@@ -31,7 +31,7 @@ func (p *Plugin) UserHasJoinedTeam(c *plugin.Context, teamMember *model.TeamMemb
 // UserHasJoinedChannel is invoked after the membership has been committed to
 // the database. If actor is not nil, the user was invited to the channel by
 // the actor.
-func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.ChannelMember, user *model.User) {
+func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.ChannelMember, _ *model.User) {
 	if channelInfo, appErr := p.API.GetChannel(channelMember.ChannelId); appErr != nil {
 		mlog.Error(
 			"error occurred while checking the type of the chanel",
