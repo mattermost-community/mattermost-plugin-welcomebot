@@ -228,6 +228,16 @@ func (p *Plugin) processActionMessage(messageTemplate MessageTemplate, action *A
 }
 
 func (p *Plugin) joinChannel(action *Action, channelName string) {
+	user, appErr := p.API.GetUser(action.Context.UserID)
+	if appErr != nil {
+		p.API.LogError("Couldn't get user details", "user_id", action.Context.UserID)
+		return
+	}
+	if user.IsBot {
+		p.API.LogInfo("Skipping adding this user to the channel since it is a bot", "user_id", action.Context.UserID)
+		return
+	}
+
 	if channel, err := p.API.GetChannelByName(action.Context.TeamID, channelName, false); err == nil {
 		if _, err := p.API.AddChannelMember(channel.Id, action.Context.UserID); err != nil {
 			p.API.LogError("Couldn't add user to the channel, continuing to next channel", "user_id", action.Context.UserID, "channel_id", channel.Id)
