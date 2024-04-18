@@ -228,12 +228,36 @@ func (p *Plugin) processActionMessage(messageTemplate MessageTemplate, action *A
 }
 
 func (p *Plugin) joinChannel(action *Action, channelName string) {
-	if channel, err := p.API.GetChannelByName(action.Context.TeamID, channelName, false); err == nil {
-		if _, err := p.API.AddChannelMember(channel.Id, action.Context.UserID); err != nil {
-			p.API.LogError("Couldn't add user to the channel, continuing to next channel", "user_id", action.Context.UserID, "channel_id", channel.Id)
-			return
+	if channelName == "*" {
+		perPage := 100
+		page := 0
+		for {
+			channels, appErr := p.API.GetPublicChannelsForTeam(action.Context.TeamID, page, perPage)
+			if appErr != nil {
+				p.API.LogError("Failed to get all the public channels for the team", "team_id", action.Context.TeamID)
+				return
+			}
+
+			if len(channels) == 0 {
+				break
+			}
+
+			for _, channel := range channels {
+				if _, err := p.API.AddChannelMember(channel.Id, action.Context.UserID); err != nil {
+					p.API.LogError("Couldn't add user to the channel", "user_id", action.Context.UserID, "channel_id", channel.Id)
+					return
+				}
+			}
+			page++
 		}
 	} else {
-		p.API.LogError("failed to get channel, continuing to the next channel", "channel_name", channelName, "user_id", action.Context.UserID)
+		if channel, err := p.API.GetChannelByName(action.Context.TeamID, channelName, false); err == nil {
+			if _, err := p.API.AddChannelMember(channel.Id, action.Context.UserID); err != nil {
+				p.API.LogError("Couldn't add user to the channel, continuing to next channel", "user_id", action.Context.UserID, "channel_id", channel.Id)
+				return
+			}
+		} else {
+			p.API.LogError("failed to get channel, continuing to the next channel", "channel_name", channelName, "user_id", action.Context.UserID)
+		}
 	}
 }
