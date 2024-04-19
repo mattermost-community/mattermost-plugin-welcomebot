@@ -232,6 +232,7 @@ func (p *Plugin) joinChannel(action *Action, channelName string) {
 		perPage := 100
 		page := 0
 		for {
+			// Adding user to all the public channels only in case of all i.e. *
 			channels, appErr := p.API.GetPublicChannelsForTeam(action.Context.TeamID, page, perPage)
 			if appErr != nil {
 				p.API.LogError("Failed to get all the public channels for the team", "team_id", action.Context.TeamID)
