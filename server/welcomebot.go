@@ -228,22 +228,22 @@ func (p *Plugin) processActionMessage(messageTemplate MessageTemplate, action *A
 }
 
 func (p *Plugin) joinChannel(action *Action, channelName string) {
-	user, appErr := p.API.GetUser(action.Context.UserID)
-	if appErr != nil {
-		p.API.LogError("Couldn't get user details. UserID: `%s` Error: `%s`", action.Context.UserID, appErr.Error())
+	user, err := p.client.User.Get(action.Context.UserID)
+	if err != nil {
+		p.client.Log.Error("Couldn't get user details", "user_id", action.Context.UserID, "error", err.Error())
 		return
 	}
 	if user.IsBot {
-		p.API.LogInfo("Skipping adding this user to the channel since it is a bot. UserID: `%s`", action.Context.UserID)
+		p.client.Log.Info("Skipping adding this user to the channel since it is a bot.", "user_id", action.Context.UserID)
 		return
 	}
 
-	if channel, err := p.API.GetChannelByName(action.Context.TeamID, channelName, false); err == nil {
-		if _, err := p.API.AddChannelMember(channel.Id, action.Context.UserID); err != nil {
-			p.API.LogError("Couldn't add user to the channel, continuing to next channel. UserID: `%s` ChannelID: `%s`", action.Context.UserID, channel.Id)
+	if channel, err := p.client.Channel.GetByName(action.Context.TeamID, channelName, false); err == nil {
+		if _, err = p.client.Channel.AddMember(channel.Id, action.Context.UserID); err != nil {
+			p.client.Log.Error("Couldn't add user to the channel, continuing to the next channel", "user_id", action.Context.UserID, "channel_id", channel.Id, "error", err.Error())
 			return
 		}
 	} else {
-		p.API.LogError("Failed to get channel, continuing to the next channel. ChannelName: `%s` UserID: `%s`", channelName, action.Context.UserID)
+		p.client.Log.Error("Failed to get the channel, continuing to the next channel.", "channel_name", channelName, "user_id", action.Context.UserID, "error", err.Error())
 	}
 }
