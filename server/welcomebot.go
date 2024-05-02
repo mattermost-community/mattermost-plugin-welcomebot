@@ -236,7 +236,7 @@ func (p *Plugin) joinChannel(action *Action, channelName string) {
 	if channelName == "*" {
 		page := defaultPage
 		for {
-			// Adding user to all the public channels when channel name in '*' (i.e. all)
+			// Adding user to all the public channels when channel name is '*' (i.e. all)
 			channels, err := p.client.Channel.ListPublicChannelsForTeam(action.Context.TeamID, page, defaultPerPage)
 			if err != nil {
 				p.client.Log.Error("Failed to get all the public channels for the team", "team_id", action.Context.TeamID, "error", err.Error())
@@ -262,7 +262,7 @@ func (p *Plugin) joinChannel(action *Action, channelName string) {
 				return
 			}
 		} else {
-			p.client.Log.Error("failed to get channel, continuing to the next channel", "channel_name", channelName, "user_id", action.Context.UserID, "error", err.Error())
+			p.client.Log.Error("Failed to get channel, continuing to the next channel", "channel_name", channelName, "user_id", action.Context.UserID, "error", err.Error())
 		}
 	}
 }

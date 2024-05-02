@@ -77,7 +77,7 @@ where
     - **ActionDisplayName**: Sets the display name for the user action buttons.
     - **ActionName**: Sets the action name used by the plugin to identify which action is taken by a user.
     - **ActionSuccessfulMessage**: Message posted after the user takes this action and joins the specified channels.
-    - **ChannelsAddedTo**: List of channel names the user is added to. Must be the channel handle used in the URL, in lowercase. For example, in the following URL the **channel name** value is `my-channel`: https://example.com/my-team/channels/my-channel
+    - **ChannelsAddedTo**: List of channel names the user is added to. Must be the channel handle used in the URL, in lowercase. For example, in the following URL the **channel name** value is `my-channel`: https://example.com/my-team/channels/my-channel. If you want to add the user in the all the public channels of the team add "*" in the `ChannelsAddedTo` array.
 
 The preview of the configured messages, as well as the creation of a channel welcome message, can be done via bot commands:
 * `/welcomebot help` - Displays usage information.
