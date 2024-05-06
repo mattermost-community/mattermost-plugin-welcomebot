@@ -45,10 +45,10 @@ func (p *Plugin) UserHasJoinedTeam(c *plugin.Context, teamMember *model.TeamMemb
 		ChannelId: data.DirectMessage.Id,
 		Message:   string(teamMessage),
 	}
-	if _, appErr := p.API.CreatePost(postDM); appErr != nil {
+	if err := p.client.Post.CreatePost(postDM); err != nil {
 		mlog.Error("failed to post welcome message to the channel",
 			mlog.String("channelId", data.DirectMessage.Id),
-			mlog.Err(appErr),
+			mlog.Err(err),
 		)
 	}
 }
@@ -57,12 +57,12 @@ func (p *Plugin) UserHasJoinedTeam(c *plugin.Context, teamMember *model.TeamMemb
 // the database. If actor is not nil, the user was invited to the channel by
 // the actor.
 func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.ChannelMember, actor *model.User) {
-	channelInfo, appErr := p.API.GetChannel(channelMember.ChannelId)
-	if appErr != nil {
+	channelInfo, err := p.client.Channel.Get(channelMember.ChannelId)
+	if err != nil {
 		mlog.Error(
 			"error occurred while checking the type of the chanel",
 			mlog.String("channelId", channelMember.ChannelId),
-			mlog.Err(appErr),
+			mlog.Err(err),
 		)
 		return
 	} else if channelInfo.Type == model.ChannelTypePrivate {
@@ -85,12 +85,12 @@ func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.Ch
 		return
 	}
 
-	dmChannel, err := p.API.GetDirectChannel(channelMember.UserId, p.botUserID)
-	if err != nil {
+	dmChannel, appErr := p.API.GetDirectChannel(channelMember.UserId, p.botUserID)
+	if appErr != nil {
 		mlog.Error(
 			"error occurred while creating direct channel to the user",
 			mlog.String("UserId", channelMember.UserId),
-			mlog.Err(err),
+			mlog.Err(appErr),
 		)
 		return
 	}

@@ -33,7 +33,7 @@ const (
 	commandTriggerDeleteTeamWelcome    = "delete_team_welcome"
 
 	// Error Message Constants
-	unsetMessageError = "welcome message has not been set"
+	unsetMessageError     = "welcome message has not been set"
 	pluginPermissionError = "/welcomebot commands can only be executed by the user with a system admin role, team admin role, or channel admin role"
 )
 
@@ -70,9 +70,9 @@ func (p *Plugin) hasSysadminRole(userID string) (bool, error) {
 }
 
 func (p *Plugin) hasTeamAdminRole(userID string, teamID string) (bool, error) {
-	teamMember, appErr := p.API.GetTeamMember(teamID, userID)
-	if appErr != nil {
-		return false, appErr
+	teamMember, err := p.client.Team.GetMember(teamID, userID)
+	if err != nil {
+		return false, err
 	}
 	if !strings.Contains(teamMember.Roles, model.PermissionsTeamAdmin) {
 		return false, nil
@@ -81,9 +81,9 @@ func (p *Plugin) hasTeamAdminRole(userID string, teamID string) (bool, error) {
 }
 
 func (p *Plugin) hasChannelAdminRole(userID string, channelID string) (bool, error) {
-	channelMember, appErr := p.API.GetChannelMember(channelID, userID)
-	if appErr != nil {
-		return false, appErr
+	channelMember, err := p.client.Channel.GetMember(channelID, userID)
+	if err != nil {
+		return false, err
 	}
 	if !strings.Contains(channelMember.Roles, model.PermissionsChannelAdmin) {
 		return false, nil
@@ -131,15 +131,15 @@ func (p *Plugin) validateCommand(action string, parameters []string) string {
 }
 
 func (p *Plugin) validatePreviewPrivileges(teamID string, args *model.CommandArgs) (bool, error) {
-	if _, teamMemberErr := p.API.GetTeamMember(teamID, args.UserId); teamMemberErr != nil {
-		if teamMemberErr.StatusCode == http.StatusNotFound {
+	if _, err := p.API.GetTeamMember(teamID, args.UserId); err != nil {
+		if err.StatusCode == http.StatusNotFound {
 			p.postCommandResponse(args, "You are not a member of that team.")
-			p.API.LogInfo("The user is not a member of the team. UserID: `%s` TeamID: `%s`", args.UserId, teamID)
-			return false, teamMemberErr
+			p.client.Log.Info("The user is not a member of the team.", "UserID", args.UserId, "TeamID", teamID)
+			return false, err
 		}
-		p.postCommandResponse(args, "error occurred while getting the Team Admin Role. Team: `%s` Error: `%s`", teamID, teamMemberErr.Error())
-		p.API.LogError("error occurred while getting the Team Admin Role. TeamID: `%s` Error: `%s`", teamID ,teamMemberErr.Error())
-		return false, teamMemberErr
+		p.postCommandResponse(args, "error occurred while getting the Team Admin Role. Team: `%s` Error: `%s`", teamID, err.Error())
+		p.client.Log.Error("Error occurred while getting the Team Admin Role.", "TeamID", teamID, "Error", err.Error())
+		return false, err
 	}
 	doesUserHavePrivileges := p.isSystemOrTeamAdmin(args, args.UserId, teamID)
 
@@ -148,23 +148,23 @@ func (p *Plugin) validatePreviewPrivileges(teamID string, args *model.CommandArg
 
 // checks if the user has System or Team Admin access to the given team
 func (p *Plugin) isSystemOrTeamAdmin(args *model.CommandArgs, userID string, teamID string) bool {
-	isSysadmin, sysAdminError := p.hasSysadminRole(userID)
-	if sysAdminError != nil {
-		p.postCommandResponse(args, "error occurred while getting the System Admin Role: `%s`", sysAdminError.Error())
-		p.API.LogError("error occurred while getting the System Admin Role. Error: `%s`", sysAdminError.Error())
+	isSysadmin, err := p.hasSysadminRole(userID)
+	if err != nil {
+		p.postCommandResponse(args, "error occurred while getting the System Admin Role: `%s`", err.Error())
+		p.client.Log.Error("Error occurred while getting the System Admin Role.", "Error", err.Error())
 		return false
 	}
 
-	isTeamAdmin, teamAdminError := p.hasTeamAdminRole(userID, teamID)
-	if teamAdminError != nil {
-		p.postCommandResponse(args, "error occurred while getting the Team Admin Role `%s`: `%s`", teamID, teamAdminError.Error())
-		p.API.LogError("error occurred while getting the Team Admin Role. TeamID: `%s` Error: `%s`", teamID, teamAdminError.Error())
+	isTeamAdmin, err := p.hasTeamAdminRole(userID, teamID)
+	if err != nil {
+		p.postCommandResponse(args, "error occurred while getting the Team Admin Role `%s`: `%s`", teamID, err.Error())
+		p.client.Log.Error("Error occurred while getting the Team Admin Role.", "TeamID", teamID, "Error", err.Error())
 		return false
 	}
 
 	if !isSysadmin && !isTeamAdmin {
 		p.postCommandResponse(args, "You do not have the proper privileges to control this Team's welcome messages.")
-		p.API.LogInfo("User does not have the proper privileges to control the Team's welcome messages. UserID: `%s` TeamID: `%s`", userID, teamID)
+		p.client.Log.Info("User does not have the proper privileges to control the Team's welcome messages.", "UserID", userID, "TeamID", teamID)
 		return false
 	}
 
@@ -173,10 +173,10 @@ func (p *Plugin) isSystemOrTeamAdmin(args *model.CommandArgs, userID string, tea
 
 // This retrieves a map of team Ids with their respective welcome message
 func (p *Plugin) getTeamKVWelcomeMessagesMap(args *model.CommandArgs) map[string]string {
-	teamsList, teamErr := p.API.GetTeams()
-	if teamErr != nil {
-		p.postCommandResponse(args, "Error occurred while getting list of the teams: %s", teamErr.Error())
-		p.API.LogError("Error occurred while getting list of the teams. Error: `%s`", teamErr.Error())
+	teamsList, err := p.client.Team.List()
+	if err != nil {
+		p.postCommandResponse(args, "Error occurred while getting list of the teams: %s", err.Error())
+		p.client.Log.Error("Error occurred while getting list of the teams", "Error", err.Error())
 		return make(map[string]string)
 	}
 
@@ -184,14 +184,14 @@ func (p *Plugin) getTeamKVWelcomeMessagesMap(args *model.CommandArgs) map[string
 
 	for _, team := range teamsList {
 		key := fmt.Sprintf("%s%s", welcomebotTeamWelcomeKey, team.Id)
-		teamMessage, appErr := p.API.KVGet(key)
-		if appErr != nil {
-			p.postCommandResponse(args, "Error occurred while retrieving the welcome messages: %s", appErr)
-			p.API.LogError("Error occurred while retrieving the welcome messages from KV store. Error: `%s`", appErr.Error())
+		var teamMessage string
+		if err := p.client.KV.Get(key, teamMessage); err != nil {
+			p.postCommandResponse(args, "Error occurred while retrieving the welcome messages: %s", err)
+			p.client.Log.Error("Error occurred while retrieving the welcome messages from KV store.", "Error", err.Error())
 			return make(map[string]string)
 		}
-		if teamMessage != nil {
-			teamsAndKVWelcomeMessagesMap[team.Id] = string(teamMessage)
+		if teamMessage != "" {
+			teamsAndKVWelcomeMessagesMap[team.Id] = teamMessage
 		}
 	}
 	return teamsAndKVWelcomeMessagesMap
@@ -199,18 +199,18 @@ func (p *Plugin) getTeamKVWelcomeMessagesMap(args *model.CommandArgs) map[string
 
 func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs) {
 	// Retrieve Team to check if a message already exists within the KV pair set
-	team, err := p.API.GetTeamByName(teamName)
+	team, err := p.client.Team.GetByName(teamName)
 	if err != nil {
 		p.postCommandResponse(args, "Error occurred while retrieving the welcome message for the team: `%s`", err.Error())
-		p.API.LogError("Error occurred while retrieving the the team data. TeamName: `%s` Error: `%s`", teamName, err.Error())
+		p.client.Log.Error("Error occurred while retrieving the the team data.", "TeamName", teamName, "Error", err.Error())
 		return
 	}
 	teamID := team.Id
 
-	validPrivileges, nerr := p.validatePreviewPrivileges(teamID, args)
-	if nerr != nil {
-		p.postCommandResponse(args, "Error occurred while retrieving the welcome message for the team.: `%s`", nerr.Error())
-		p.API.LogError("Error occurred while retrieving validating preview privilege for the team. TeamID: `%s` Error: `%s`", teamID, nerr.Error())
+	validPrivileges, err := p.validatePreviewPrivileges(teamID, args)
+	if err != nil {
+		p.postCommandResponse(args, "Error occurred while retrieving the welcome message for the team.: `%s`", err.Error())
+		p.client.Log.Error("Error occurred while retrieving validating preview privilege for the team.", "TeamID", teamID, "Error", err.Error())
 		return
 	}
 	if !validPrivileges {
@@ -218,16 +218,16 @@ func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs)
 	}
 
 	key := fmt.Sprintf("%s%s", welcomebotTeamWelcomeKey, teamID)
-	data, appErr := p.API.KVGet(key)
-	if appErr != nil {
-		p.postCommandResponse(args, "Error occurred while retrieving the welcome message for the team: `%s`", appErr.Error())
-		p.API.LogError("Error occured while retrieving team welcome message from KV store. TeamID: `%s` Error: `%s`", teamID, appErr.Error())
+	var data string
+	if err = p.client.KV.Get(key, data); err != nil {
+		p.postCommandResponse(args, "Error occurred while retrieving the welcome message for the team: `%s`", err.Error())
+		p.client.Log.Error("Error occured while retrieving team welcome message from KV store.", "TeamID", teamID, "Error", err.Error())
 		return
 	}
 
-	if len(data) != 0 {
+	if data != "" {
 		// Create ephemeral team welcome message
-		p.postCommandResponse(args, string(data))
+		p.postCommandResponse(args, data)
 		return
 	}
 
@@ -248,7 +248,7 @@ func (p *Plugin) executeCommandList(args *model.CommandArgs) {
 	isSysadmin, sysAdminError := p.hasSysadminRole(args.UserId)
 	if sysAdminError != nil {
 		p.postCommandResponse(args, "Error occurred while getting the System Admin Role `%s`: `%s`", args.TeamId, sysAdminError.Error())
-		p.API.LogError("Error occurred while getting the System Admin Role `%s`: `%s`", args.TeamId, sysAdminError.Error())
+		p.client.Log.Error("Error occurred while getting the System Admin Role", "TeamID", args.TeamId, "Error", sysAdminError.Error())
 		return
 	}
 
@@ -350,7 +350,7 @@ func (p *Plugin) executeCommandSetTeamWelcome(args *model.CommandArgs) {
 
 	// Fields will consume ALL whitespace, so plain re-joining of the
 	// parameters slice will not produce the same message
-	subCommands := strings.SplitN(args.Command, "set_team_welcome", 2)
+	subCommands := strings.SplitN(args.Command, commandTriggerSetTeamWelcome, 2)
 	if len(subCommands) != 2 {
 		p.postCommandResponse(args, "Error occurred while extracting the welcome message from the command")
 		return
@@ -358,7 +358,7 @@ func (p *Plugin) executeCommandSetTeamWelcome(args *model.CommandArgs) {
 	message := strings.TrimSpace(subCommands[1])
 
 	key := makeTeamWelcomeMessageKey(args.TeamId)
-	if appErr := p.API.KVSet(key, []byte(message)); appErr != nil {
+	if isValueSet, appErr := p.client.KV.Set(key, []byte(message), nil); !isValueSet {
 		p.postCommandResponse(args, "Error occurred while storing the welcome message for the team: `%s`", appErr)
 		return
 	}
@@ -379,8 +379,8 @@ func (p *Plugin) executeCommandDeleteTeamWelcome(args *model.CommandArgs) {
 		return
 	}
 
-	if appErr := p.API.KVDelete(key); appErr != nil {
-		p.postCommandResponse(args, "Error occurred while deleting the welcome message for the team: `%s`", appErr)
+	if err := p.client.KV.Delete(key); err != nil {
+		p.postCommandResponse(args, "Error occurred while deleting the welcome message for the team: `%s`", err)
 		return
 	}
 
@@ -400,7 +400,7 @@ func (p *Plugin) executeCommandGetTeamWelcome(args *model.CommandArgs) {
 	}
 
 	// retrieve team name through the teamid
-	team, err := p.API.GetTeam(args.TeamId)
+	team, err := p.client.Team.Get(args.TeamId)
 	if err != nil {
 		p.postCommandResponse(args, err.Error())
 		return
@@ -415,7 +415,7 @@ func (p *Plugin) executeCommandGetTeamWelcome(args *model.CommandArgs) {
 		if message.TeamName == team.Name {
 			if err := p.previewWelcomeMessage(team.Name, args, *message); err != nil {
 				p.postCommandResponse(args, "Error occurred while processing greeting for team `%s`: `%s`", team.Name, err.Error())
-				p.API.LogError("Error occurred while processing greeting for team. TeamName: `%s` Error : `%s`", team.Name, err.Error())
+				p.client.Log.Error("Error occurred while processing greeting for team.", "TeamName", team.Name, "Error", err.Error())
 			}
 			return
 		}
@@ -524,7 +524,7 @@ func (p *Plugin) getUniqueTeamsWithWelcomeMsgSlice(teamsWithConfigWelcomeMsg map
 	// Convert the ids into team names before combining into 1 large list
 	teamsWithKVWelcomeKeys := []string{}
 	for _, id := range teamIDsWithKVWelcomeKeys {
-		team, err := p.API.GetTeam(id)
+		team, err := p.client.Team.Get(id)
 		if err != nil {
 			continue
 		}
