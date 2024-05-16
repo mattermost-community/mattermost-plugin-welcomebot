@@ -30,7 +30,7 @@ Use this plugin to improve onboarding and HR processes. It adds a Welcome Bot th
 
 To configure the Welcome Bot, edit your `config.json` file with a message you want to send to a user in the following format:
 
-```
+```json
 "Plugins": {
     "com.mattermost.welcomebot": {
         "WelcomeMessages": [
