@@ -1,1 +1,8 @@
+bin/
 dist
+webapp/src/manifest.ts
+server/manifest.go
+
+
+# VS Code
+.vscode
