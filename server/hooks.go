@@ -14,7 +14,7 @@ import (
 
 // UserHasBeenCreated is invoked after a user was created.
 func (p *Plugin) UserHasBeenCreated(c *plugin.Context, user *model.User) {
-	data := p.constructGlobalMessageTemplate(user.Id)
+	data := p.getGlobalMessageTemplateData(user.Id)
 	if data == nil {
 		return
 	}
@@ -25,7 +25,7 @@ func (p *Plugin) UserHasBeenCreated(c *plugin.Context, user *model.User) {
 		}
 
 		if len(message.GlobalWelcomeMessage) > 0 {
-			tmpMsg, _ := template.New("Response").Parse(strings.Join(message.GlobalWelcomeMessage, "\n"))
+			tmpMsg, _ := template.New(templateNameResponse).Parse(strings.Join(message.GlobalWelcomeMessage, "\n"))
 			var message bytes.Buffer
 			err := tmpMsg.Execute(&message, data)
 			if err != nil {

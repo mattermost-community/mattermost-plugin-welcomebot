@@ -45,7 +45,7 @@ func (p *Plugin) constructMessageTemplate(userID, teamID string) *MessageTemplat
 	return data
 }
 
-func (p *Plugin) constructGlobalMessageTemplate(userID string) *GloablMessageTemplate {
+func (p *Plugin) getGlobalMessageTemplateData(userID string) *GloablMessageTemplate {
 	data := &GloablMessageTemplate{}
 	var err *model.AppError
 
@@ -156,7 +156,7 @@ func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMes
 		}
 	}
 
-	tmpMsg, _ := template.New("Response").Parse(strings.Join(configMessage.Message, "\n"))
+	tmpMsg, _ := template.New(templateNameResponse).Parse(strings.Join(configMessage.Message, "\n"))
 	var message bytes.Buffer
 	err := tmpMsg.Execute(&message, messageTemplate)
 	if err != nil {
@@ -225,7 +225,7 @@ func (p *Plugin) processActionMessage(messageTemplate MessageTemplate, action *A
 		p.joinChannel(action, channelName)
 	}
 
-	tmpMsg, _ := template.New("Response").Parse(strings.Join(configMessageAction.ActionSuccessfulMessage, "\n"))
+	tmpMsg, _ := template.New(templateNameResponse).Parse(strings.Join(configMessageAction.ActionSuccessfulMessage, "\n"))
 	var message bytes.Buffer
 	err := tmpMsg.Execute(&message, messageTemplate)
 	if err != nil {
