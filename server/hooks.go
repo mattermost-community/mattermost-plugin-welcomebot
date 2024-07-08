@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mattermost/mattermost-server/v6/model"
-	"github.com/mattermost/mattermost-server/v6/plugin"
-	"github.com/mattermost/mattermost-server/v6/shared/mlog"
+	"github.com/mattermost/mattermost/server/public/model"
+	"github.com/mattermost/mattermost/server/public/plugin"
+	"github.com/mattermost/mattermost/server/public/shared/mlog"
 )
 
 // UserHasBeenCreated is invoked after a user was created.
@@ -28,7 +28,7 @@ func (p *Plugin) UserHasBeenCreated(c *plugin.Context, user *model.User) {
 		if len(message.GlobalWelcomeMessage) == 0 {
 			continue
 		}
-		
+
 		tmpMsg, _ := template.New(templateNameResponse).Parse(strings.Join(message.GlobalWelcomeMessage, "\n"))
 		var message bytes.Buffer
 		err := tmpMsg.Execute(&message, data)

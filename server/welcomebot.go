@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mattermost/mattermost-server/v6/model"
+	"github.com/mattermost/mattermost/server/public/model"
 	"github.com/pkg/errors"
 )
 
@@ -147,7 +147,7 @@ func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMes
 						"team_id": messageTemplate.Team.Id,
 						"user_id": messageTemplate.User.Id,
 					},
-					URL: fmt.Sprintf("%v/plugins/%v/addchannels", p.getSiteURL(), manifest.ID),
+					URL: fmt.Sprintf("%v/plugins/%v/addchannels", p.getSiteURL(), manifest.Id),
 				},
 			}
 
