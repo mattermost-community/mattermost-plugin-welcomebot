@@ -14,8 +14,9 @@ import (
 
 // UserHasBeenCreated is invoked after a user was created.
 func (p *Plugin) UserHasBeenCreated(c *plugin.Context, user *model.User) {
-	data := p.getGlobalMessageTemplateData(user.Id)
-	if data == nil {
+	data, err := p.getGlobalMessageTemplateData(user.Id)
+	if err != nil {
+		p.API.LogError("Unable to get global message template data", "UserID", user.Id, "Error", err.Error())
 		return
 	}
 
@@ -24,25 +25,25 @@ func (p *Plugin) UserHasBeenCreated(c *plugin.Context, user *model.User) {
 			continue
 		}
 
-		if len(message.GlobalWelcomeMessage) > 0 {
-			tmpMsg, _ := template.New(templateNameResponse).Parse(strings.Join(message.GlobalWelcomeMessage, "\n"))
-			var message bytes.Buffer
-			err := tmpMsg.Execute(&message, data)
-			if err != nil {
-				p.API.LogError("Failed to execute message template", "Error", err.Error())
-			}
+		if len(message.GlobalWelcomeMessage) == 0 {
+			continue
+		}
+		
+		tmpMsg, _ := template.New(templateNameResponse).Parse(strings.Join(message.GlobalWelcomeMessage, "\n"))
+		var message bytes.Buffer
+		err := tmpMsg.Execute(&message, data)
+		if err != nil {
+			p.API.LogError("Failed to execute message template", "Error", err.Error())
+		}
 
-			post := &model.Post{
-				Message:   message.String(),
-				UserId:    p.botUserID,
-				ChannelId: data.DirectMessage.Id,
-			}
+		post := &model.Post{
+			Message:   message.String(),
+			UserId:    p.botUserID,
+			ChannelId: data.DirectMessage.Id,
+		}
 
-			if _, err := p.API.CreatePost(post); err != nil {
-				p.API.LogError("We could not create the response post", "UserID", post.UserId, "Error", err.Error())
-			}
-
-			return
+		if _, err := p.API.CreatePost(post); err != nil {
+			p.API.LogError("We could not create the response post", "UserID", post.UserId, "Error", err.Error())
 		}
 	}
 }

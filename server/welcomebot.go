@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost-server/v6/model"
+	"github.com/pkg/errors"
 )
 
 func (p *Plugin) constructMessageTemplate(userID, teamID string) *MessageTemplate {
@@ -45,27 +46,25 @@ func (p *Plugin) constructMessageTemplate(userID, teamID string) *MessageTemplat
 	return data
 }
 
-func (p *Plugin) getGlobalMessageTemplateData(userID string) *GloablMessageTemplate {
-	data := &GloablMessageTemplate{}
-	var err *model.AppError
+func (p *Plugin) getGlobalMessageTemplateData(userID string) (*GlobalMessageTemplate, error) {
+	data := &GlobalMessageTemplate{}
+	var appErr *model.AppError
 
 	if len(userID) > 0 {
-		if data.User, err = p.API.GetUser(userID); err != nil {
-			p.API.LogError("failed to query user", "user_id", userID)
-			return nil
+		if data.User, appErr = p.API.GetUser(userID); appErr != nil {
+			return nil, errors.Wrap(appErr, "failed to query user")
 		}
 	}
 
 	if data.User != nil {
-		if data.DirectMessage, err = p.API.GetDirectChannel(userID, p.botUserID); err != nil {
-			p.API.LogError("failed to query direct message channel", "user_id", userID)
-			return nil
+		if data.DirectMessage, appErr = p.API.GetDirectChannel(userID, p.botUserID); appErr != nil {
+			return nil, errors.Wrap(appErr, "failed to query direct message channel")
 		}
 	}
 
 	data.UserDisplayName = data.User.GetDisplayName(model.ShowNicknameFullName)
 
-	return data
+	return data, nil
 }
 
 func (p *Plugin) getSiteURL() string {
