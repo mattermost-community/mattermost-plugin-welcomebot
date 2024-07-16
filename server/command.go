@@ -9,7 +9,8 @@ import (
 )
 
 const commandHelp = `* |/welcomebot preview [team-name] | - preview the welcome message for the given team name. The current user's username will be used to render the template.
-* |/welcomebot list| - list the teams for which welcome messages were defined
+* |/welcomebot list| - list the teams for which welcome messages were defined.
+The following commands will only be allowed to be run by system admins and users with permission to manage channel roles. |set_channel_welcome|, |get_channel_welcome| and |delete_channel_welcome|.
 * |/welcomebot set_channel_welcome [welcome-message]| - set the welcome message for the given channel. Direct channels are not supported.
 * |/welcomebot get_channel_welcome| - print the welcome message set for the given channel (if any)
 * |/welcomebot delete_channel_welcome| - delete the welcome message for the given channel (if any)
@@ -214,8 +215,12 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 		return &model.CommandResponse{}, nil
 	}
 	if !isSysadmin {
-		p.postCommandResponse(args, "/welcomebot commands can only be executed by the user with system admin role")
-		return &model.CommandResponse{}, nil
+		if action == commandTriggerSetChannelWelcome || action == commandTriggerGetChannelWelcome || action == commandTriggerDeleteChannelWelcome {
+			if hasPermissionTo := p.API.HasPermissionToChannel(args.UserId, args.ChannelId, model.PermissionManageChannelRoles); !hasPermissionTo {
+				p.postCommandResponse(args, "The `/welcomebot %s` command can only be executed by system admins and channel admins.", action)
+				return &model.CommandResponse{}, nil
+			}
+		}
 	}
 
 	switch action {
