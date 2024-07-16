@@ -26,6 +26,8 @@ Use this plugin to improve onboarding and HR processes. It adds a Welcome Bot th
 
 2. Modify your `config.json` file to include your Welcome Bot's messages and actions, under the `PluginSettings`. See below for an example of what this should look like.
 
+3. Please ensure that you go to **System Console > Site Configuration > Users and Teams** and verify the setting for **Enable users to open Direct Message channels with:**. If the value of this field is set to `Any member of the team`, you'll need to add the welcome bot manually to all the teams where it needs to be included.
+
 ## Usage
 
 To configure the Welcome Bot, edit your `config.json` file with a message you want to send to a user in the following format:
