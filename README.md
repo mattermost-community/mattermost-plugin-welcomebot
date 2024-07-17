@@ -21,14 +21,18 @@ Use this plugin to improve onboarding and HR processes. It adds a Welcome Bot th
 
 ## Configuration
 
-1. Go to **System Console > Plugins > Management** and click **Enable** to enable the Welcome Bot plugin.
+1. Go to **System Console > Plugins > Plugin Management** and click **Enable** to enable the Welcome Bot plugin.
     - If you are running Mattermost v5.11 or earlier, you must first go to the [releases page of this GitHub repository](https://github.com/mattermost/mattermost-plugin-welcomebot/releases), download the latest release, and upload it to your Mattermost instance [following this documentation](https://docs.mattermost.com/administration/plugins.html#plugin-uploads).
 
-2. Modify your `config.json` file to include your Welcome Bot's messages and actions, under the `PluginSettings`. See below for an example of what this should look like.
+2. Modify your configuration to include your Welcome Bot's messages and actions. See below for examples.
 
 ## Usage
 
-To configure the Welcome Bot, edit your `config.json` file with a message you want to send to a user in the following format:
+To configure the Welcome Bot, choose one of the below options:
+
+### config.json
+
+Edit your `config.json` file with a message you want to send to a user in the following format:
 
 ```
         "Plugins": {
@@ -65,7 +69,45 @@ To configure the Welcome Bot, edit your `config.json` file with a message you wa
         },
 ```
 
-where
+This field can be JSON or a string containing JSON.
+
+### System Console
+
+In the UI, go to **System Console -> Plugins -> Welcome Bot** and edit the **Welcome Messages** text field to include the JSON array for messages you want to send. Use the following format:
+
+```
+[
+    {
+        "TeamName": "your-team-name, your-second-team-name",
+        "DelayInSeconds": 3,
+        "Message": [
+            "Your welcome message here. Each list item specifies one line in the message text."
+        ],
+        "AttachmentMessage": [
+            "Attachment message containing user actions"
+        ],
+        "Actions" : [
+            {
+                "ActionType": "button",
+                "ActionDisplayName": "User Action",
+                "ActionName": "action-name",
+                "ActionSuccessfulMessage": [
+                    "Message posted after the user takes this action and joins channels specified by 'ChannelsAddedTo'."
+                ],
+                "ChannelsAddedTo": ["channel-1", "channel-2"]
+            },
+            {
+                "ActionType": "automatic",
+                "ChannelsAddedTo": ["channel-3", "channel-4"]
+            }
+        ]
+    }
+]
+```
+
+If you see `[Object object]` in the text field, that's because the configuration was configured as JSON directly in your `config.json` instead of as a string.
+
+### Reference
 
 - **TeamName**: The team for which the Welcome Bot sends a message for. Must be the team handle used in the URL, in lowercase. For example, in the following URL the **TeamName** value is `my-team`: https://example.com/my-team/channels/my-channel
 - **DelayInSeconds**: The number of seconds after joining a team that the user receives a welcome message.
