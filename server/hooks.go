@@ -69,13 +69,20 @@ func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.Ch
 		return
 	}
 
+	templateData := p.constructChannelMessageTemplate(channelMember.UserId, channelMember.ChannelId)
+	if templateData == nil {
+		return
+	}
+
+	message := p.getTemplateMessage([]string{string(data)}, templateData)
+
 	// We send a DM and an opportunistic ephemeral message to the channel. See
 	// the discussion at the link below for more details:
 	// https://github.com/mattermost/mattermost-plugin-welcomebot/pull/31#issuecomment-611691023
 	postDM := &model.Post{
 		UserId:    p.botUserID,
 		ChannelId: dmChannel.Id,
-		Message:   string(data),
+		Message:   message,
 	}
 	if _, appErr := p.API.CreatePost(postDM); appErr != nil {
 		mlog.Error("failed to post welcome message to the channel",
@@ -87,7 +94,7 @@ func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.Ch
 	postChannel := &model.Post{
 		UserId:    p.botUserID,
 		ChannelId: channelMember.ChannelId,
-		Message:   string(data),
+		Message:   message,
 	}
 	time.Sleep(1 * time.Second)
 	_ = p.API.SendEphemeralPost(channelMember.UserId, postChannel)
