@@ -39,7 +39,7 @@ func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.Ch
 			mlog.Err(appErr),
 		)
 		return
-	} else if channelInfo.Type == model.ChannelTypePrivate {
+	} else if channelInfo.Type == model.ChannelTypeDirect {
 		return
 	}
 
