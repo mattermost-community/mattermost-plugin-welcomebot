@@ -7,12 +7,13 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/mattermost/mattermost-server/v6/model"
-	"github.com/mattermost/mattermost-server/v6/plugin"
+	"github.com/mattermost/mattermost/server/public/model"
+	"github.com/mattermost/mattermost/server/public/plugin"
 )
 
 const commandHelp = `* |/welcomebot preview [team-name] | - preview the welcome message for the given team name. The current user's username will be used to render the template.
-* |/welcomebot list| - list the teams for which welcome messages were defined
+* |/welcomebot list| - list the teams for which welcome messages were defined.
+The following commands will only be allowed to be run by system admins and users with permission to manage channel roles. |set_channel_welcome|, |get_channel_welcome| and |delete_channel_welcome|.
 * |/welcomebot set_channel_welcome [welcome-message]| - set the welcome message for the given channel. Direct channels are not supported.
 * |/welcomebot get_channel_welcome| - print the welcome message set for the given channel (if any)
 * |/welcomebot delete_channel_welcome| - delete the welcome message for the given channel (if any)
@@ -34,7 +35,7 @@ const (
 
 	// Error Message Constants
 	unsetMessageError     = "welcome message has not been set"
-	pluginPermissionError = "/welcomebot commands can only be executed by the user with a system admin role, team admin role, or channel admin role"
+	pluginPermissionError = "The `/welcomebot %s` commands can only be executed by the user with a system admin role, team admin role, or channel admin role"
 )
 
 func getCommand() *model.Command {
@@ -424,7 +425,7 @@ func (p *Plugin) executeCommandGetTeamWelcome(args *model.CommandArgs) {
 	p.postCommandResponse(args, unsetMessageError)
 }
 
-func (p *Plugin) checkCommandPermission(args *model.CommandArgs) (bool, error) {
+func (p *Plugin) checkCommandPermission(args *model.CommandArgs, action string) (bool, error) {
 	isSysadmin, err := p.hasSysadminRole(args.UserId)
 	if err != nil {
 		p.postCommandResponse(args, "Authorization failed: %s", err.Error())
@@ -444,7 +445,7 @@ func (p *Plugin) checkCommandPermission(args *model.CommandArgs) (bool, error) {
 	}
 
 	if !isSysadmin && !isTeamAdmin && !isChannelAdmin {
-		p.postCommandResponse(args, pluginPermissionError)
+		p.postCommandResponse(args, fmt.Sprintf(pluginPermissionError, action))
 		return true, errors.New(pluginPermissionError)
 	}
 
@@ -472,7 +473,7 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 		return &model.CommandResponse{}, nil
 	}
 
-	err, _ := p.checkCommandPermission(args)
+	err, _ := p.checkCommandPermission(args, action)
 	if err {
 		return &model.CommandResponse{}, nil
 	}
