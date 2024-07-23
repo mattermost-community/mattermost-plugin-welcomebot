@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"slices"
 	"strings"
 
 	"github.com/mattermost/mattermost/server/public/model"
@@ -533,7 +532,8 @@ func (p *Plugin) getUniqueTeamsWithWelcomeMsgSlice(teamsWithConfigWelcomeMsg map
 		teamsWithKVWelcomeKeys = append(teamsWithKVWelcomeKeys, team.Name)
 	}
 
-	allTeamNames := slices.Concat(teamsWithConfigWelcomeKeys, teamsWithKVWelcomeKeys)
+	allTeamNames := teamsWithConfigWelcomeKeys
+	allTeamNames = append(allTeamNames, teamsWithKVWelcomeKeys...)
 
 	// Leverage the unique priniciple of keys in a map to store unique values as they are encountered
 	teamNameMap := make(map[string]int)
