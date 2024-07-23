@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"slices"
 	"strings"
 
 	"github.com/mattermost/mattermost/server/public/model"
@@ -35,7 +36,7 @@ const (
 
 	// Error Message Constants
 	unsetMessageError     = "welcome message has not been set"
-	pluginPermissionError = "The `/welcomebot %s` commands can only be executed by the user with a system admin role, team admin role, or channel admin role"
+	pluginPermissionError = "`/welcomebot %s` commands can only be executed by the user with a system admin role, team admin role, or channel admin role"
 )
 
 func getCommand() *model.Command {
@@ -222,7 +223,7 @@ func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs)
 	var data string
 	if err = p.client.KV.Get(key, data); err != nil {
 		p.postCommandResponse(args, "Error occurred while retrieving the welcome message for the team: `%s`", err.Error())
-		p.client.Log.Error("Error occured while retrieving team welcome message from KV store.", "TeamID", teamID, "Error", err.Error())
+		p.client.Log.Error("Error occurred while retrieving team welcome message from KV store.", "TeamID", teamID, "Error", err.Error())
 		return
 	}
 
@@ -531,7 +532,7 @@ func (p *Plugin) getUniqueTeamsWithWelcomeMsgSlice(teamsWithConfigWelcomeMsg map
 		}
 		teamsWithKVWelcomeKeys = append(teamsWithKVWelcomeKeys, team.Name)
 	}
-	allTeamNames := append(teamsWithConfigWelcomeKeys, teamsWithKVWelcomeKeys...)
+	allTeamNames := slices.Concat(teamsWithConfigWelcomeKeys, teamsWithKVWelcomeKeys)
 
 	// Leverage the unique priniciple of keys in a map to store unique values as they are encountered
 	teamNameMap := make(map[string]int)
