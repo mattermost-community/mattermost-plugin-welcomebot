@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-
-	"github.com/mattermost/mattermost/server/public/model"
 )
 
 const (
@@ -75,9 +73,14 @@ func (p *Plugin) OnConfigurationChange() error {
 }
 
 // Takes a teamID to construct the correct key, and then retrieve the necessary value from the pair stored in the DB
-func (p *Plugin) GetTeamWelcomeMessageFromKV(teamID string) ([]byte, *model.AppError) {
+func (p *Plugin) GetTeamWelcomeMessageFromKV(teamID string) (string, error) {
 	key := makeTeamWelcomeMessageKey(teamID)
-	return p.API.KVGet(key)
+	var message string
+	if err := p.client.KV.Get(key, &message); err != nil {
+		return "", err
+	}
+
+	return message, nil
 }
 
 func makeTeamWelcomeMessageKey(teamID string) string {
