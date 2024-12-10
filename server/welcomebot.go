@@ -10,6 +10,11 @@ import (
 	"github.com/mattermost/mattermost/server/public/model"
 )
 
+const (
+	defaultPerPage = 100
+	defaultPage    = 0
+)
+
 func (p *Plugin) constructMessageTemplate(userID, teamID string) *MessageTemplate {
 	data := &MessageTemplate{}
 	var err *model.AppError
@@ -228,12 +233,36 @@ func (p *Plugin) processActionMessage(messageTemplate MessageTemplate, action *A
 }
 
 func (p *Plugin) joinChannel(action *Action, channelName string) {
-	if channel, err := p.API.GetChannelByName(action.Context.TeamID, channelName, false); err == nil {
-		if _, err := p.API.AddChannelMember(channel.Id, action.Context.UserID); err != nil {
-			p.API.LogError("Couldn't add user to the channel, continuing to next channel", "user_id", action.Context.UserID, "channel_id", channel.Id)
-			return
+	if channelName == "*" {
+		page := defaultPage
+		for {
+			// Adding user to all the public channels when channel name is '*' (i.e. all)
+			channels, err := p.client.Channel.ListPublicChannelsForTeam(action.Context.TeamID, page, defaultPerPage)
+			if err != nil {
+				p.client.Log.Error("Failed to get all the public channels for the team", "team_id", action.Context.TeamID, "error", err.Error())
+				return
+			}
+
+			if len(channels) == 0 {
+				break
+			}
+
+			for _, channel := range channels {
+				if _, err := p.client.Channel.AddMember(channel.Id, action.Context.UserID); err != nil {
+					p.client.Log.Error("Couldn't add user to the channel", "user_id", action.Context.UserID, "channel_id", channel.Id, "error", err.Error())
+					return
+				}
+			}
+			page++
 		}
 	} else {
-		p.API.LogError("failed to get channel, continuing to the next channel", "channel_name", channelName, "user_id", action.Context.UserID)
+		if channel, err := p.client.Channel.GetByName(action.Context.TeamID, channelName, false); err == nil {
+			if _, err = p.client.Channel.AddMember(channel.Id, action.Context.UserID); err != nil {
+				p.client.Log.Error("Couldn't add user to the channel, continuing to next channel", "user_id", action.Context.UserID, "channel_id", channel.Id, "error", err.Error())
+				return
+			}
+		} else {
+			p.client.Log.Error("Failed to get channel, continuing to the next channel", "channel_name", channelName, "user_id", action.Context.UserID, "error", err.Error())
+		}
 	}
 }
