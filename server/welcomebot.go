@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost/server/public/model"
+	"github.com/pkg/errors"
 )
 
 func (p *Plugin) constructMessageTemplate(userID, teamID string) *MessageTemplate {
@@ -43,6 +44,27 @@ func (p *Plugin) constructMessageTemplate(userID, teamID string) *MessageTemplat
 	data.UserDisplayName = data.User.GetDisplayName(model.ShowNicknameFullName)
 
 	return data
+}
+
+func (p *Plugin) getGlobalMessageTemplateData(userID string) (*GlobalMessageTemplate, error) {
+	data := &GlobalMessageTemplate{}
+	var appErr *model.AppError
+
+	if len(userID) > 0 {
+		if data.User, appErr = p.API.GetUser(userID); appErr != nil {
+			return nil, errors.Wrap(appErr, "failed to query user")
+		}
+	}
+
+	if data.User != nil {
+		if data.DirectMessage, appErr = p.API.GetDirectChannel(userID, p.botUserID); appErr != nil {
+			return nil, errors.Wrap(appErr, "failed to query direct message channel")
+		}
+	}
+
+	data.UserDisplayName = data.User.GetDisplayName(model.ShowNicknameFullName)
+
+	return data, nil
 }
 
 func (p *Plugin) getSiteURL() string {
@@ -133,7 +155,7 @@ func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMes
 		}
 	}
 
-	tmpMsg, _ := template.New("Response").Parse(strings.Join(configMessage.Message, "\n"))
+	tmpMsg, _ := template.New(templateNameResponse).Parse(strings.Join(configMessage.Message, "\n"))
 	var message bytes.Buffer
 	err := tmpMsg.Execute(&message, messageTemplate)
 	if err != nil {
@@ -202,7 +224,7 @@ func (p *Plugin) processActionMessage(messageTemplate MessageTemplate, action *A
 		p.joinChannel(action, channelName)
 	}
 
-	tmpMsg, _ := template.New("Response").Parse(strings.Join(configMessageAction.ActionSuccessfulMessage, "\n"))
+	tmpMsg, _ := template.New(templateNameResponse).Parse(strings.Join(configMessageAction.ActionSuccessfulMessage, "\n"))
 	var message bytes.Buffer
 	err := tmpMsg.Execute(&message, messageTemplate)
 	if err != nil {

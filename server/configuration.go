@@ -25,6 +25,9 @@ type ConfigMessageAction struct {
 
 // ConfigMessage represents the message to send in channel
 type ConfigMessage struct {
+	// This message will send a global welcome message using the bot
+	GlobalWelcomeMessage []string
+
 	// This message will fire when it matches the supplied team
 	TeamName string
 
