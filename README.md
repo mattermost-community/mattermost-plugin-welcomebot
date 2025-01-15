@@ -9,8 +9,6 @@
 [![Release](https://img.shields.io/github/v/release/mattermost/mattermost-plugin-welcomebot)](https://github.com/mattermost/mattermost-plugin-welcomebot/releases/latest)
 [![HW](https://img.shields.io/github/issues/mattermost/mattermost-plugin-welcomebot/Up%20For%20Grabs?color=dark%20green&label=Help%20Wanted)](https://github.com/mattermost/mattermost-plugin-welcomebot/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc+label%3A%22Up+For+Grabs%22+label%3A%22Help+Wanted%22)
 
-**Maintainer:** [@wiggin77](https://github.com/wiggin77)
-
 Use this plugin to improve onboarding and HR processes. It adds a Welcome Bot that helps welcome users to teams and/or channels as well as easily join channels based on selections.
 
 ![image](https://user-images.githubusercontent.com/13119842/58736467-fd226400-83cb-11e9-827b-6bbe33d062ab.png)
