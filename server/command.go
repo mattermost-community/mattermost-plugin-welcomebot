@@ -10,19 +10,19 @@ import (
 
 const commandHelp = `* |/welcomebot preview [team-name] | - preview the welcome message for the given team name. The current user's username will be used to render the template.
 * |/welcomebot list| - list the teams for which welcome messages were defined.
-The following commands will only be allowed to be run by system admins and users with permission to manage channel roles. |set_channel_welcome|, |get_channel_welcome| and |delete_channel_welcome|.
-* |/welcomebot set_channel_welcome [welcome-message]| - set the welcome message for the given channel. Direct channels are not supported.
-* |/welcomebot get_channel_welcome| - print the welcome message set for the given channel (if any)
-* |/welcomebot delete_channel_welcome| - delete the welcome message for the given channel (if any)
+The following commands will only be allowed to be run by system admins and users with permission to manage channel roles. |set_personal_channel_welcome|, |get_channel_welcome| and |delete_channel_welcome|.
+* |/welcomebot set_personal_channel_welcome [welcome-message]| - set the personal welcome message for the given channel. Direct channels are not supported.
+* |/welcomebot get_personal_channel_welcome| - print the personal welcome message set for the given channel (if any)
+* |/welcomebot delete_personal_channel_welcome| - delete the personal welcome message for the given channel (if any)
 `
 
 const (
-	commandTriggerPreview              = "preview"
-	commandTriggerList                 = "list"
-	commandTriggerSetChannelWelcome    = "set_channel_welcome"
-	commandTriggerGetChannelWelcome    = "get_channel_welcome"
-	commandTriggerDeleteChannelWelcome = "delete_channel_welcome"
-	commandTriggerHelp                 = "help"
+	commandTriggerPreview                      = "preview"
+	commandTriggerList                         = "list"
+	commandTriggerSetPersonalChannelWelcome    = "set_personal_channel_welcome"
+	commandTriggerGetPersonalChannelWelcome    = "get_personal_channel_welcome"
+	commandTriggerDeletePersonalChannelWelcome = "delete_personal_channel_welcome"
+	commandTriggerHelp                         = "help"
 )
 
 func getCommand() *model.Command {
@@ -31,7 +31,7 @@ func getCommand() *model.Command {
 		DisplayName:      "welcomebot",
 		Description:      "Welcome Bot helps add new team members to channels.",
 		AutoComplete:     true,
-		AutoCompleteDesc: "Available commands: preview, help, list, set_channel_welcome, get_channel_welcome, delete_channel_welcome",
+		AutoCompleteDesc: "Available commands: preview, help, list, set_personal_channel_welcome, get_personal_channel_welcome, delete_personal_channel_welcome",
 		AutoCompleteHint: "[command]",
 		AutocompleteData: getAutocompleteData(),
 	}
@@ -67,17 +67,17 @@ func (p *Plugin) validateCommand(action string, parameters []string) string {
 		if len(parameters) > 0 {
 			return "List command does not accept any extra parameters"
 		}
-	case commandTriggerSetChannelWelcome:
+	case commandTriggerSetPersonalChannelWelcome:
 		if len(parameters) == 0 {
-			return "`set_channel_welcome` command requires the message to be provided"
+			return "`set_personal_channel_welcome` command requires the message to be provided"
 		}
-	case commandTriggerGetChannelWelcome:
+	case commandTriggerGetPersonalChannelWelcome:
 		if len(parameters) > 0 {
-			return "`get_channel_welcome` command does not accept any extra parameters"
+			return "`get_personal_channel_welcome` command does not accept any extra parameters"
 		}
-	case commandTriggerDeleteChannelWelcome:
+	case commandTriggerDeletePersonalChannelWelcome:
 		if len(parameters) > 0 {
-			return "`delete_channel_welcome` command does not accept any extra parameters"
+			return "`delete_personal_channel_welcome` command does not accept any extra parameters"
 		}
 	}
 
@@ -138,7 +138,8 @@ func (p *Plugin) executeCommandSetWelcome(args *model.CommandArgs) {
 
 	// strings.Fields will consume ALL whitespace, so plain re-joining of the
 	// parameters slice will not produce the same message
-	message := strings.SplitN(args.Command, "set_channel_welcome", 2)[1]
+	// TODO validate indexes here
+	message := strings.SplitN(args.Command, "set_personal_channel_welcome", 2)[1]
 	message = strings.TrimSpace(message)
 
 	key := fmt.Sprintf("%s%s", welcomebotChannelWelcomeKey, args.ChannelId)
@@ -215,7 +216,7 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 		return &model.CommandResponse{}, nil
 	}
 	if !isSysadmin {
-		if action == commandTriggerSetChannelWelcome || action == commandTriggerGetChannelWelcome || action == commandTriggerDeleteChannelWelcome {
+		if action == commandTriggerSetPersonalChannelWelcome || action == commandTriggerGetPersonalChannelWelcome || action == commandTriggerDeletePersonalChannelWelcome {
 			if hasPermissionTo := p.API.HasPermissionToChannel(args.UserId, args.ChannelId, model.PermissionManageChannelRoles); !hasPermissionTo {
 				p.postCommandResponse(args, "The `/welcomebot %s` command can only be executed by system admins and channel admins.", action)
 				return &model.CommandResponse{}, nil
@@ -231,13 +232,13 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 	case commandTriggerList:
 		p.executeCommandList(args)
 		return &model.CommandResponse{}, nil
-	case commandTriggerSetChannelWelcome:
+	case commandTriggerSetPersonalChannelWelcome:
 		p.executeCommandSetWelcome(args)
 		return &model.CommandResponse{}, nil
-	case commandTriggerGetChannelWelcome:
+	case commandTriggerGetPersonalChannelWelcome:
 		p.executeCommandGetWelcome(args)
 		return &model.CommandResponse{}, nil
-	case commandTriggerDeleteChannelWelcome:
+	case commandTriggerDeletePersonalChannelWelcome:
 		p.executeCommandDeleteWelcome(args)
 		return &model.CommandResponse{}, nil
 	case commandTriggerHelp:
@@ -254,7 +255,7 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 
 func getAutocompleteData() *model.AutocompleteData {
 	welcomebot := model.NewAutocompleteData("welcomebot", "[command]",
-		"Available commands: preview, help, list, set_channel_welcome, get_channel_welcome, delete_channel_welcome")
+		"Available commands: preview, help, list, set_personal_channel_welcome, get_personal_channel_welcome, delete_personal_channel_welcome")
 
 	preview := model.NewAutocompleteData("preview", "[team-name]", "Preview the welcome message for the given team name")
 	preview.AddTextArgument("Team name to preview welcome message", "[team-name]", "")
@@ -263,14 +264,14 @@ func getAutocompleteData() *model.AutocompleteData {
 	list := model.NewAutocompleteData("list", "", "Lists team welcome messages")
 	welcomebot.AddCommand(list)
 
-	setChannelWelcome := model.NewAutocompleteData("set_channel_welcome", "[welcome-message]", "Set the welcome message for the channel")
+	setChannelWelcome := model.NewAutocompleteData("set_personal_channel_welcome", "[welcome-message]", "Set the welcome message for the channel")
 	setChannelWelcome.AddTextArgument("Welcome message for the channel", "[welcome-message]", "")
 	welcomebot.AddCommand(setChannelWelcome)
 
-	getChannelWelcome := model.NewAutocompleteData("get_channel_welcome", "", "Print the welcome message set for the channel")
+	getChannelWelcome := model.NewAutocompleteData("get_personal_channel_welcome", "", "Print the welcome message set for the channel")
 	welcomebot.AddCommand(getChannelWelcome)
 
-	deleteChannelWelcome := model.NewAutocompleteData("delete_channel_welcome", "", "Delete the welcome message for the channel")
+	deleteChannelWelcome := model.NewAutocompleteData("delete_personal_channel_welcome", "", "Delete the welcome message for the channel")
 	welcomebot.AddCommand(deleteChannelWelcome)
 
 	return welcomebot
