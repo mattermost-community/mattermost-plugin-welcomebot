@@ -51,8 +51,8 @@ apply:
 ## Install go tools
 install-go-tools:
 	@echo Installing go tools
-	$(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.51.1
-	$(GO) install gotest.tools/gotestsum@v1.7.0
+	$(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.4
+	$(GO) install gotest.tools/gotestsum@v1.12.0
 
 ## Runs eslint and golangci-lint
 .PHONY: check-style

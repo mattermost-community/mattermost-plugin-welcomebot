@@ -1,4 +1,4 @@
-package main
+package core
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 
 // ServeHTTP allows the plugin to implement the http.Handler interface. Requests destined for the
 // /plugins/{id} path will be routed to the plugin.
-func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
+func (p *Plugin) ServeHTTP(_ *plugin.Context, w http.ResponseWriter, r *http.Request) {
 	var action *Action
 	if err := json.NewDecoder(r.Body).Decode(&action); err != nil || action == nil {
 		p.API.LogDebug("failed to decode action from request body", "error", err.Error())
@@ -40,7 +40,7 @@ func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if data.DirectMessage, err = p.API.GetDirectChannel(action.Context.UserID, p.botUserID); err != nil {
+	if data.DirectMessage, err = p.API.GetDirectChannel(action.Context.UserID, p.BotUserID); err != nil {
 		p.API.LogError("failed to query direct message channel", "user_id", action.Context.UserID, "error", err.Error())
 		p.encodeEphemeralMessage(w, "WelcomeBot Error: We could not find the welcome bot direct message channel")
 		return
@@ -57,7 +57,7 @@ func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Req
 
 	switch r.URL.Path {
 	case "/addchannels":
-		for _, wm := range p.getWelcomeMessages() {
+		for _, wm := range p.GetWelcomeMessages() {
 			if data.Team.Name == wm.TeamName {
 				for _, ac := range wm.Actions {
 					if ac.ActionName == action.Context.Action {

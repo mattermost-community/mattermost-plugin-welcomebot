@@ -1,4 +1,4 @@
-package main
+package core
 
 import (
 	"bytes"
@@ -34,7 +34,7 @@ func (p *Plugin) constructMessageTemplate(userID, teamID string) *MessageTemplat
 	}
 
 	if data.User != nil {
-		if data.DirectMessage, err = p.API.GetDirectChannel(userID, p.botUserID); err != nil {
+		if data.DirectMessage, err = p.API.GetDirectChannel(userID, p.BotUserID); err != nil {
 			p.API.LogError("failed to query direct message channel", "user_id", userID)
 			return nil
 		}
@@ -76,7 +76,7 @@ func (p *Plugin) newSampleMessageTemplate(teamName string, userID string) (*Mess
 		return nil, fmt.Errorf("failed to query town-square %s: %w", data.Team.Name, err)
 	}
 
-	if data.DirectMessage, err = p.API.GetDirectChannel(data.User.Id, p.botUserID); err != nil {
+	if data.DirectMessage, err = p.API.GetDirectChannel(data.User.Id, p.BotUserID); err != nil {
 		p.API.LogError("failed to query direct message channel", "user_name", data.User.Username)
 		return nil, fmt.Errorf("failed to query direct message channel %s: %w", data.User.Id, err)
 	}
@@ -86,7 +86,7 @@ func (p *Plugin) newSampleMessageTemplate(teamName string, userID string) (*Mess
 	return data, nil
 }
 
-func (p *Plugin) previewWelcomeMessage(teamName string, args *model.CommandArgs, configMessage ConfigMessage) error {
+func (p *Plugin) PreviewWelcomeMessage(teamName string, args *model.CommandArgs, configMessage ConfigMessage) error {
 	messageTemplate, err := p.newSampleMessageTemplate(teamName, args.UserId)
 	if err != nil {
 		return err
@@ -125,7 +125,7 @@ func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMes
 						"team_id": messageTemplate.Team.Id,
 						"user_id": messageTemplate.User.Id,
 					},
-					URL: fmt.Sprintf("%v/plugins/%v/addchannels", p.getSiteURL(), manifest.Id),
+					URL: fmt.Sprintf("%v/plugins/%v/addchannels", p.getSiteURL(), p.Manifest.Id),
 				},
 			}
 
@@ -145,7 +145,7 @@ func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMes
 
 	post := &model.Post{
 		Message: message.String(),
-		UserId:  p.botUserID,
+		UserId:  p.BotUserID,
 	}
 
 	if len(configMessage.AttachmentMessage) > 0 || len(actionButtons) > 0 {
@@ -215,7 +215,7 @@ func (p *Plugin) processActionMessage(messageTemplate MessageTemplate, action *A
 	post := &model.Post{
 		Message:   message.String(),
 		ChannelId: messageTemplate.DirectMessage.Id,
-		UserId:    p.botUserID,
+		UserId:    p.BotUserID,
 	}
 
 	if _, err := p.API.CreatePost(post); err != nil {

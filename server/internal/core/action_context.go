@@ -1,4 +1,4 @@
-package main
+package core
 
 // ActionContext passed from action buttons
 type ActionContext struct {

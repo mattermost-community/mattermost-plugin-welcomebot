@@ -1,0 +1,19 @@
+filename: "{{.InterfaceName | snakecase}}_mock.go"
+dir: "{{.InterfaceDir}}"
+mockname: "Mock{{.InterfaceName}}"
+outpkg: "{{.PackageName}}"
+inpackage: True
+packages:
+    github.com/evrone-erp/mattermost-plugin-welcomebot/server/internal/usecase:
+        config:
+        interfaces:
+            Messenger:
+            CommandMessenger:
+            ChannelWelcomeRepo:
+            ChannelRepo:
+    github.com/mattermost/mattermost/server/public/plugin:
+        config:
+            inpackage: False
+            dir: "server/mocks/mattermost/server/public/plugin/{{.InterfaceName}}"
+        interfaces:
+            API:

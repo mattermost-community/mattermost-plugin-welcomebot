@@ -1,4 +1,4 @@
-package main
+package core
 
 import "github.com/mattermost/mattermost/server/public/model"
 

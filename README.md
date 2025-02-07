@@ -85,9 +85,12 @@ The preview of the configured messages, as well as the creation of a channel wel
 * `/welcomebot help` - Displays usage information.
 * `/welcomebot list` - Lists the teams for which greetings were defined.
 * `/welcomebot preview [team-name]` - Sends ephemeral messages to the user calling the command, with the preview of the welcome message[s] for the given team name and the user that requested the preview.
-* `/welcomebot set_channel_welcome [welcome-message]` - Sets the given text as current's channel welcome message.
-* `/welcomebot get_channel_welcome` - Gets the current channel's welcome message.
-* `/welcomebot delete_channel_welcome` - Deletes the current channel's welcome message.
+* `/welcomebot set_personal_channel_welcome [welcome-message]` - Sets the given text as current's channel personal welcome message.
+* `/welcomebot get_personal_channel_welcome` - Gets the current channel's personal welcome message.
+* `/welcomebot delete_personal_channel_welcome` - Deletes the current channel's personal welcome message.
+* `/welcomebot set_published_channel_welcome [welcome-message]` - Sets the given text as current's channel published (visible for all) welcome message.
+* `/welcomebot get_published_channel_welcome` - Gets the current channel's published (visible for all) welcome message.
+* `/welcomebot delete_published_channel_welcome` - Deletes the current channel's published (visible for all) welcome message.
 
 ## Example
 

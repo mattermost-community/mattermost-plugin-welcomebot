@@ -1,12 +1,28 @@
-name: ci
-on:
-  pull_request:
-  push:
-    branches:
-      - master
-      - main
+name: CI
+on: pull_request
 
 jobs:
-  plugin-ci:
-    uses: mattermost/actions-workflows/.github/workflows/community-plugin-ci.yml@139a051e8651e6246e3764fe342297b73120e590
-    secrets: inherit
+  tests:
+    name: runner / tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.23.6
+      - name: Unit Tests
+        run: |
+          go test -v ./server/...
+
+  golangci-lint:
+    name: runner / golangci-lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
+      - name: Setting Go version
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.23.6
+      - name: golangci-lint
+        run: golangci-lint run

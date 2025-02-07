@@ -1,4 +1,4 @@
-package main
+package core
 
 const (
 	actionTypeAutomatic = "automatic"
@@ -50,7 +50,7 @@ type Configuration struct {
 }
 
 // List of the welcome messages from the configuration
-func (p *Plugin) getWelcomeMessages() []*ConfigMessage {
+func (p *Plugin) GetWelcomeMessages() []*ConfigMessage {
 	return p.welcomeMessages.Load().([]*ConfigMessage)
 }
 
