@@ -6,3 +6,5 @@ server/manifest.go
 
 # VS Code
 .vscode
+
+.idea/
