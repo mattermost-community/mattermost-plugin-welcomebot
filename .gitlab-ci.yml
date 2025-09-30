@@ -1,6 +1,6 @@
 .template_repo: &repo
   project: &ci_tmpl 'tag-messenger/ci-templates'
-  ref: &ci_tmpl_vers 'v1.3.0'
+  ref: &ci_tmpl_vers 'v1.4.0'
 
 variables:
   CI_TMPL_PROJECT: *ci_tmpl
@@ -9,24 +9,4 @@ variables:
 
 include:
   - { <<: *repo, file: /common.yml }
-
-stages:
-  - setup
-  - build
-
-manifest:
-  stage: setup
-  extends:
-    - .runner-tags
-    - .go-cache
-    - .server-image
-  script:
-    - make apply
-  artifacts:
-    expire_in: 1h
-    untracked: true
-    paths:
-      - build/
-      - server/
-      - webapp/
-
+  - { <<: *repo, file: /plugin.yml }
