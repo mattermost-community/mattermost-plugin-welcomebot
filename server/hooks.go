@@ -55,6 +55,7 @@ func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.Ch
 	}
 
 	if data == nil {
+		// No welcome message for the given channel
 		return
 	}
 

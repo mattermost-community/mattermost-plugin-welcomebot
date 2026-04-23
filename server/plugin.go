@@ -21,6 +21,9 @@ const (
 type Plugin struct {
 	plugin.MattermostPlugin
 
+	// botUserID of the created bot account.
+	botUserID string
+
 	client *pluginapi.Client
 
 	welcomeMessages atomic.Value
@@ -29,9 +32,6 @@ type Plugin struct {
 	// the channel welcome ephemeral post. Stored atomically so it is safe to read
 	// from hook goroutines without locking.
 	channelWelcomeAutoJoinDelay atomic.Int64
-
-	// botUserID of the created bot account.
-	botUserID string
 }
 
 // OnActivate ensures the bot account exists
