@@ -14,7 +14,7 @@ The changelog can be found at https://github.com/mattermost/mattermost-plugin-we
 
 ### Maintenance
 
-- **Updated `golangci-lint` from `v1.51.1` to `v1.64.8`.** The previous version panicked on Go 1.21+ export data format. Updated to the current stable release.
+- **Updated `golangci-lint` from `v1.51.1` to `v1.64.8` with Go version fallback.** `v1.64.8` requires Go 1.23+ and cannot be installed via `go install` on CI (Go 1.21.13, `GOTOOLCHAIN=local`). The Makefile now tries `go install` first; if that fails, it downloads the pre-built binary directly from the GitHub release tarball. This works on all Go versions without requiring sudo or a toolchain upgrade.
 - **Removed fully-inactivated linters from `.golangci.yml`.** `deadcode`, `golint`, `interfacer`, `structcheck`, and `varcheck` were removed in golangci-lint v1.49–1.51 and caused exit code 7. Replaced `golint` with `revive`; the others are covered by `unused`.
 - **Replaced deprecated `check-shadowing` govet option.** The `govet.check-shadowing` config key was removed in newer golangci-lint. Replaced with an explicit `disable: [shadow]` entry to preserve the original lint scope without enabling the stricter full shadow analyzer against pre-existing build tooling.
 - **Renamed unused interface parameter `c *plugin.Context` to `_`.** Required by the Mattermost plugin interface but unused in `UserHasJoinedTeam`, `UserHasJoinedChannel`, and `ServeHTTP`. Renamed to satisfy `revive`'s unused-parameter check.
