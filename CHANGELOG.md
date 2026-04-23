@@ -10,7 +10,7 @@ The changelog can be found at https://github.com/mattermost/mattermost-plugin-we
 - **`appErr` rendered as raw pointer in command response.** Passing a `*model.AppError` directly to a `%s` format verb produced `%!s(*model.AppError=...)` instead of the error message. Changed to `appErr.Error()`.
 - **Help text referred to "Direct channels" instead of "Private channels".** The `set_channel_welcome` command rejects private channels, not direct channels. The help string now matches the actual restriction.
 - **`plugin.json` setting default encoded as string instead of number.** `ChannelWelcomeAutoJoinDelaySeconds` declared `type: number` but its `default` was `"5"` (a JSON string). Changed to `5` to match the declared type and prevent System Console rendering issues.
-- **`TestFilterLogEntries/filter_out_old_entries` failed due to off-by-one boundary.** `filterLogEntries` used `Before(since)` which passed entries with a timestamp exactly equal to `since`. Changed to `!After(since)` so entries at or before `since` are excluded, matching the test's expectation.
+- **`TestFilterLogEntries/filter_out_old_entries` was flaky and failed on CI.** Two root causes: (1) `filterLogEntries` used `Before(since)` which let entries with a timestamp exactly equal to `since` pass through — changed to `!After(since)` to exclude them. (2) The test used repeated `time.Now()` calls inside the map literal for log entry timestamps, but `since` was captured earlier at line 99. On a slow CI machine the "now" entry's timestamp ended up one millisecond after `since`, causing it to slip through the filter and return 3 entries instead of 2. Fixed by anchoring all timestamps in the test to the same `now` variable used for `since`.
 
 ### Maintenance
 
