@@ -11,7 +11,7 @@ import (
 
 // UserHasJoinedTeam is invoked after the membership has been committed to the database. If
 // actor is not nil, the user was added to the team by the actor.
-func (p *Plugin) UserHasJoinedTeam(c *plugin.Context, teamMember *model.TeamMember, actor *model.User) {
+func (p *Plugin) UserHasJoinedTeam(_ *plugin.Context, teamMember *model.TeamMember, _ *model.User) {
 	data := p.constructMessageTemplate(teamMember.UserId, teamMember.TeamId)
 	if data == nil {
 		return
@@ -31,7 +31,7 @@ func (p *Plugin) UserHasJoinedTeam(c *plugin.Context, teamMember *model.TeamMemb
 // UserHasJoinedChannel is invoked after the membership has been committed to
 // the database. If actor is not nil, the user was invited to the channel by
 // the actor.
-func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.ChannelMember, actor *model.User) {
+func (p *Plugin) UserHasJoinedChannel(_ *plugin.Context, channelMember *model.ChannelMember, actor *model.User) {
 	if channelInfo, appErr := p.API.GetChannel(channelMember.ChannelId); appErr != nil {
 		mlog.Error(
 			"error occurred while checking the type of the chanel",

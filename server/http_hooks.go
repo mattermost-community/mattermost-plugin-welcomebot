@@ -11,7 +11,7 @@ import (
 
 // ServeHTTP allows the plugin to implement the http.Handler interface. Requests destined for the
 // /plugins/{id} path will be routed to the plugin.
-func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
+func (p *Plugin) ServeHTTP(_ *plugin.Context, w http.ResponseWriter, r *http.Request) {
 	// Route admin endpoints before decoding the action body — admin requests
 	// use a different payload format than interactive button actions.
 	if r.URL.Path == "/admin/set_channel_welcome" {
@@ -21,7 +21,13 @@ func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Req
 
 	var action *Action
 	if err := json.NewDecoder(r.Body).Decode(&action); err != nil || action == nil {
-		p.API.LogDebug("failed to decode action from request body", "error", err.Error())
+		// err may be nil when the body decoded successfully but action is nil
+		// (e.g. the payload was JSON null) — guard before calling err.Error().
+		errMsg := "nil action"
+		if err != nil {
+			errMsg = err.Error()
+		}
+		p.API.LogDebug("failed to decode action from request body", "error", errMsg)
 		p.encodeEphemeralMessage(w, "WelcomeBot Error: We could not decode the action")
 		return
 	}

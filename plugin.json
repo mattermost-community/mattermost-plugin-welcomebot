@@ -23,7 +23,7 @@
               "type": "number",
               "help_text": "How long to wait (in seconds) before sending the channel welcome ephemeral after a user joins. Applies to all join types. Increase if users report the welcome appearing before the channel has loaded. Default: 5.",
               "placeholder": "5",
-              "default": "5"
+              "default": 5
           }
       ]
   }

@@ -12,7 +12,7 @@ const commandHelp = `* |/welcomebot welcome| - show the welcome message for the 
 * |/welcomebot preview [team-name] | - preview the welcome message for the given team name. The current user's username will be used to render the template.
 * |/welcomebot list| - list the teams for which welcome messages were defined.
 The following commands will only be allowed to be run by system admins and users with permission to manage channel roles. |set_channel_welcome|, |get_channel_welcome| and |delete_channel_welcome|.
-* |/welcomebot set_channel_welcome [welcome-message]| - set the welcome message for the given channel. Direct channels are not supported.
+* |/welcomebot set_channel_welcome [welcome-message]| - set the welcome message for the given channel. Private channels are not supported.
 * |/welcomebot get_channel_welcome| - print the welcome message set for the given channel (if any)
 * |/welcomebot delete_channel_welcome| - delete the welcome message for the given channel (if any)
 `
@@ -95,7 +95,7 @@ func (p *Plugin) executeCommandWelcome(args *model.CommandArgs) {
 	key := fmt.Sprintf("%s%s", welcomebotChannelWelcomeKey, args.ChannelId)
 	data, appErr := p.API.KVGet(key)
 	if appErr != nil {
-		p.postCommandResponse(args, "error retrieving the welcome message for this channel: `%s`", appErr)
+		p.postCommandResponse(args, "error retrieving the welcome message for this channel: `%s`", appErr.Error())
 		return
 	}
 

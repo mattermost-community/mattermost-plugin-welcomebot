@@ -2,6 +2,23 @@
 
 The changelog can be found at https://github.com/mattermost/mattermost-plugin-welcomebot/releases.
 
+## v1.4.1 — 2026-04-23
+
+### Fixed
+
+- **Nil panic in `ServeHTTP` action decoder.** When the request body decoded successfully but produced a nil action (e.g. JSON null payload), the error handler called `err.Error()` on a nil error, causing a panic. Added a nil guard so the error message is set correctly in both cases.
+- **`appErr` rendered as raw pointer in command response.** Passing a `*model.AppError` directly to a `%s` format verb produced `%!s(*model.AppError=...)` instead of the error message. Changed to `appErr.Error()`.
+- **Help text referred to "Direct channels" instead of "Private channels".** The `set_channel_welcome` command rejects private channels, not direct channels. The help string now matches the actual restriction.
+- **`plugin.json` setting default encoded as string instead of number.** `ChannelWelcomeAutoJoinDelaySeconds` declared `type: number` but its `default` was `"5"` (a JSON string). Changed to `5` to match the declared type and prevent System Console rendering issues.
+- **`TestFilterLogEntries/filter_out_old_entries` failed due to off-by-one boundary.** `filterLogEntries` used `Before(since)` which passed entries with a timestamp exactly equal to `since`. Changed to `!After(since)` so entries at or before `since` are excluded, matching the test's expectation.
+
+### Maintenance
+
+- **Updated `golangci-lint` from `v1.51.1` to `v1.64.8`.** The previous version panicked on Go 1.21+ export data format. Updated to the current stable release.
+- **Removed fully-inactivated linters from `.golangci.yml`.** `deadcode`, `golint`, `interfacer`, `structcheck`, and `varcheck` were removed in golangci-lint v1.49–1.51 and caused exit code 7. Replaced `golint` with `revive`; the others are covered by `unused`.
+- **Replaced deprecated `check-shadowing` govet option.** The `govet.check-shadowing` config key was removed in newer golangci-lint. Replaced with an explicit `disable: [shadow]` entry to preserve the original lint scope without enabling the stricter full shadow analyzer against pre-existing build tooling.
+- **Renamed unused interface parameter `c *plugin.Context` to `_`.** Required by the Mattermost plugin interface but unused in `UserHasJoinedTeam`, `UserHasJoinedChannel`, and `ServeHTTP`. Renamed to satisfy `revive`'s unused-parameter check.
+
 ## v1.4.0 — 2026-04-23
 
 ### Changed
@@ -19,7 +36,7 @@ The changelog can be found at https://github.com/mattermost/mattermost-plugin-we
 
 - **`/welcomebot welcome` command.** Any user can run this in any channel to re-show that channel's welcome message as an ephemeral visible only to them. The primary recovery path for missed welcomes — see known limitations below.
 
-- **`POST /admin/set_channel_welcome` endpoint.** Allows system admins to set channel welcome messages programmatically. Accepts `{"channel_id": "...", "message": "..."}` with a Bearer token. Intended for setup scripts — see `setup-welcomebot.sh` for a reference implementation.
+- **`POST /admin/set_channel_welcome` endpoint.** Allows system admins to set channel welcome messages programmatically. Accepts `{"channel_id": "...", "message": "..."}` with a Bearer token. Intended for setup scripts and administrative automation.
 
 ### Known Limitations
 

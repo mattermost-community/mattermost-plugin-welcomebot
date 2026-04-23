@@ -17,16 +17,18 @@ const (
 	welcomebotChannelWelcomeKey = "chanmsg_"
 )
 
-// Plugin represents the welcome bot plugin
+// Plugin represents the welcome bot plugin.
+// Field order is chosen to minimize GC pointer-scan bytes (fieldalignment):
+// pointer-containing fields first, scalar fields last.
 type Plugin struct {
 	plugin.MattermostPlugin
 
-	// botUserID of the created bot account.
-	botUserID string
+	welcomeMessages atomic.Value
 
 	client *pluginapi.Client
 
-	welcomeMessages atomic.Value
+	// botUserID of the created bot account.
+	botUserID string
 
 	// channelWelcomeAutoJoinDelay is the number of seconds to wait before sending
 	// the channel welcome ephemeral post. Stored atomically so it is safe to read
