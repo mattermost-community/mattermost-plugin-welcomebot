@@ -51,7 +51,10 @@ apply:
 ## Install go tools
 install-go-tools:
 	@echo Installing go tools
-	$(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
+	$(GO) install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8 || \
+		(mkdir -p $(GOBIN) && GOOS=$$(go env GOOS) && GOARCH=$$(go env GOARCH) && \
+		 curl -sSfL "https://github.com/golangci/golangci-lint/releases/download/v1.64.8/golangci-lint-1.64.8-$${GOOS}-$${GOARCH}.tar.gz" \
+		 | tar -xz --strip-components=1 -C $(GOBIN) "golangci-lint-1.64.8-$${GOOS}-$${GOARCH}/golangci-lint")
 	$(GO) install gotest.tools/gotestsum@v1.7.0
 
 ## Runs eslint and golangci-lint
