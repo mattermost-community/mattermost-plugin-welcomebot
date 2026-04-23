@@ -88,6 +88,19 @@ The preview of the configured messages, as well as the creation of a channel wel
 * `/welcomebot set_channel_welcome [welcome-message]` - Sets the given text as current's channel welcome message.
 * `/welcomebot get_channel_welcome` - Gets the current channel's welcome message.
 * `/welcomebot delete_channel_welcome` - Deletes the current channel's welcome message.
+* `/welcomebot welcome` - Re-shows the current channel's welcome message as an ephemeral visible only to you. Use this if you missed the welcome when you first joined.
+
+## Known Limitations
+
+### Channel welcome ephemerals can be missed on auto-join
+
+Channel welcome ephemerals work reliably on a user's **first-ever join** to a team. At that point, the auto-added channels are cold in the client — no cached state exists — so when the user navigates to each channel, the ephemeral is still live in the WebSocket buffer and renders correctly.
+
+On **rejoin** (the user left the team and rejoined), the client already has those channels in its local store. When the user opens a channel, the client rehydrates the post list from the server. Because the server never stores ephemerals, the welcome is gone before the page renders and the user never sees it.
+
+This is a Mattermost platform limitation. The server does not provide a `UserHasViewedChannel` hook or any equivalent event that would allow the plugin to trigger delivery at the moment the user first opens a channel. There is no workaround that guarantees delivery on rejoin without user action.
+
+**Recovery:** Run `/welcomebot welcome` in any channel to re-show its welcome message as an ephemeral visible only to you. Mention this command in your onboarding documentation so new users know it exists.
 
 ## Example
 

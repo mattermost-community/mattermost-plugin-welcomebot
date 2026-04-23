@@ -25,12 +25,28 @@ type Plugin struct {
 
 	welcomeMessages atomic.Value
 
+	// channelWelcomeAutoJoinDelay is the number of seconds to wait before sending
+	// the channel welcome ephemeral post. Stored atomically so it is safe to read
+	// from hook goroutines without locking.
+	channelWelcomeAutoJoinDelay atomic.Int64
+
 	// botUserID of the created bot account.
 	botUserID string
 }
 
-// OnActivate ensure the bot account exists
+// OnActivate ensures the bot account exists
 func (p *Plugin) OnActivate() error {
+	// Ensure welcomeMessages is always initialized before hooks can fire.
+	// getWelcomeMessages() does a bare type assertion on Load() — if Store was
+	// never called the assertion panics.
+	p.welcomeMessages.Store([]*ConfigMessage{})
+
+	if err := p.OnConfigurationChange(); err != nil {
+		p.API.LogWarn("failed to load initial configuration on activate, using defaults",
+			"error", err.Error(),
+		)
+	}
+
 	p.client = pluginapi.NewClient(p.API, p.Driver)
 
 	bot := &model.Bot{

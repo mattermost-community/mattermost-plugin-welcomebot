@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/mattermost/mattermost/server/public/model"
@@ -11,6 +12,13 @@ import (
 // ServeHTTP allows the plugin to implement the http.Handler interface. Requests destined for the
 // /plugins/{id} path will be routed to the plugin.
 func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Request) {
+	// Route admin endpoints before decoding the action body — admin requests
+	// use a different payload format than interactive button actions.
+	if r.URL.Path == "/admin/set_channel_welcome" {
+		p.handleAdminSetChannelWelcome(w, r)
+		return
+	}
+
 	var action *Action
 	if err := json.NewDecoder(r.Body).Decode(&action); err != nil || action == nil {
 		p.API.LogDebug("failed to decode action from request body", "error", err.Error())
@@ -73,6 +81,80 @@ func (p *Plugin) ServeHTTP(c *plugin.Context, w http.ResponseWriter, r *http.Req
 	default:
 		http.NotFound(w, r)
 	}
+}
+
+// handleAdminSetChannelWelcome handles POST /admin/set_channel_welcome.
+//
+// Accepts {"channel_id": "...", "message": "..."} and writes the message into
+// the plugin KV store using the same key as /welcomebot set_channel_welcome.
+// The stored message is sent as an ephemeral post when a user joins the channel.
+//
+// This endpoint exists so setup scripts can apply channel welcome messages
+// from config without requiring a human to run /welcomebot set_channel_welcome
+// in every channel individually. Caller must be a system admin.
+func (p *Plugin) handleAdminSetChannelWelcome(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID := r.Header.Get("Mattermost-User-Id")
+	if userID == "" {
+		http.Error(w, "not authenticated", http.StatusUnauthorized)
+		return
+	}
+
+	isSysadmin, err := p.hasSysadminRole(userID)
+	if err != nil {
+		p.API.LogError("failed to check sysadmin role", "user_id", userID, "error", err.Error())
+		http.Error(w, "authorization check failed", http.StatusInternalServerError)
+		return
+	}
+	if !isSysadmin {
+		http.Error(w, "forbidden — system admin required", http.StatusForbidden)
+		return
+	}
+
+	var req struct {
+		ChannelID string `json:"channel_id"`
+		Message   string `json:"message"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "failed to decode request body", http.StatusBadRequest)
+		return
+	}
+	if req.ChannelID == "" {
+		http.Error(w, "channel_id is required", http.StatusBadRequest)
+		return
+	}
+
+	// Block private channels — UserHasJoinedChannel skips them, so a welcome
+	// message stored here would never fire. Reject early so setup scripts get
+	// a clear error rather than silently doing nothing.
+	channelInfo, appErr := p.API.GetChannel(req.ChannelID)
+	if appErr != nil {
+		p.API.LogError("failed to look up channel", "channel_id", req.ChannelID, "error", appErr.Error())
+		http.Error(w, "channel not found", http.StatusBadRequest)
+		return
+	}
+	if channelInfo.Type == model.ChannelTypePrivate {
+		http.Error(w, "welcome messages are not supported for private channels", http.StatusBadRequest)
+		return
+	}
+
+	key := fmt.Sprintf("%s%s", welcomebotChannelWelcomeKey, req.ChannelID)
+	if appErr := p.API.KVSet(key, []byte(req.Message)); appErr != nil {
+		p.API.LogError("failed to store channel welcome message",
+			"channel_id", req.ChannelID,
+			"error", appErr.Error(),
+		)
+		http.Error(w, "failed to store welcome message", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, `{"status":"ok","channel_id":%q}`, req.ChannelID)
 }
 
 func (p *Plugin) encodeEphemeralMessage(w http.ResponseWriter, message string) {

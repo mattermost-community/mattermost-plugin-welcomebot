@@ -31,7 +31,7 @@ func (p *Plugin) UserHasJoinedTeam(c *plugin.Context, teamMember *model.TeamMemb
 // UserHasJoinedChannel is invoked after the membership has been committed to
 // the database. If actor is not nil, the user was invited to the channel by
 // the actor.
-func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.ChannelMember, _ *model.User) {
+func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.ChannelMember, actor *model.User) {
 	if channelInfo, appErr := p.API.GetChannel(channelMember.ChannelId); appErr != nil {
 		mlog.Error(
 			"error occurred while checking the type of the chanel",
@@ -55,40 +55,30 @@ func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.Ch
 	}
 
 	if data == nil {
-		// No welcome message for the given channel
 		return
 	}
 
-	dmChannel, err := p.API.GetDirectChannel(channelMember.UserId, p.botUserID)
-	if err != nil {
-		mlog.Error(
-			"error occurred while creating direct channel to the user",
-			mlog.String("UserId", channelMember.UserId),
-			mlog.Err(err),
-		)
+	// actor == nil means the join was triggered by a plugin API call (AddChannelMember).
+	// In that case joinChannel handles the ephemeral directly — skip here to avoid
+	// double delivery. Only send from this hook when a real user triggered the join
+	// (self-join: actor == user, or admin-add: actor is a different user).
+	if actor == nil {
 		return
 	}
 
-	// We send a DM and an opportunistic ephemeral message to the channel. See
-	// the discussion at the link below for more details:
-	// https://github.com/mattermost/mattermost-plugin-welcomebot/pull/31#issuecomment-611691023
-	postDM := &model.Post{
-		UserId:    p.botUserID,
-		ChannelId: dmChannel.Id,
-		Message:   string(data),
-	}
-	if _, appErr := p.API.CreatePost(postDM); appErr != nil {
-		mlog.Error("failed to post welcome message to the channel",
-			mlog.String("channelId", dmChannel.Id),
-			mlog.Err(appErr),
-		)
-	}
-
-	postChannel := &model.Post{
+	// Send the welcome as an ephemeral post after a short delay. Ephemerals are
+	// delivered to the user's client via WebSocket and remain in the channel's
+	// post list for the duration of the session — the user sees it automatically
+	// when they navigate to the channel, with no action required on their part.
+	// The delay gives the client time to render the channel before the post lands.
+	delay := p.getChannelWelcomeAutoJoinDelay()
+	post := &model.Post{
 		UserId:    p.botUserID,
 		ChannelId: channelMember.ChannelId,
 		Message:   string(data),
 	}
-	time.Sleep(1 * time.Second)
-	_ = p.API.SendEphemeralPost(channelMember.UserId, postChannel)
+	go func() {
+		time.Sleep(delay)
+		_ = p.API.SendEphemeralPost(channelMember.UserId, post)
+	}()
 }

@@ -8,7 +8,8 @@ import (
 	"github.com/mattermost/mattermost/server/public/plugin"
 )
 
-const commandHelp = `* |/welcomebot preview [team-name] | - preview the welcome message for the given team name. The current user's username will be used to render the template.
+const commandHelp = `* |/welcomebot welcome| - show the welcome message for the current channel (visible only to you). Useful if you were auto-joined and missed it.
+* |/welcomebot preview [team-name] | - preview the welcome message for the given team name. The current user's username will be used to render the template.
 * |/welcomebot list| - list the teams for which welcome messages were defined.
 The following commands will only be allowed to be run by system admins and users with permission to manage channel roles. |set_channel_welcome|, |get_channel_welcome| and |delete_channel_welcome|.
 * |/welcomebot set_channel_welcome [welcome-message]| - set the welcome message for the given channel. Direct channels are not supported.
@@ -17,6 +18,7 @@ The following commands will only be allowed to be run by system admins and users
 `
 
 const (
+	commandTriggerWelcome              = "welcome"
 	commandTriggerPreview              = "preview"
 	commandTriggerList                 = "list"
 	commandTriggerSetChannelWelcome    = "set_channel_welcome"
@@ -31,7 +33,7 @@ func getCommand() *model.Command {
 		DisplayName:      "welcomebot",
 		Description:      "Welcome Bot helps add new team members to channels.",
 		AutoComplete:     true,
-		AutoCompleteDesc: "Available commands: preview, help, list, set_channel_welcome, get_channel_welcome, delete_channel_welcome",
+		AutoCompleteDesc: "Available commands: welcome, preview, help, list, set_channel_welcome, get_channel_welcome, delete_channel_welcome",
 		AutoCompleteHint: "[command]",
 		AutocompleteData: getAutocompleteData(),
 	}
@@ -84,6 +86,32 @@ func (p *Plugin) validateCommand(action string, parameters []string) string {
 	return ""
 }
 
+// executeCommandWelcome re-sends the channel welcome message as an ephemeral post
+// visible only to the user who ran the command. Any user can run this — it is the
+// self-service way to see a channel's welcome message after being auto-joined and
+// missing the initial ephemeral (which only fires if the user is actively viewing
+// the channel at join time).
+func (p *Plugin) executeCommandWelcome(args *model.CommandArgs) {
+	key := fmt.Sprintf("%s%s", welcomebotChannelWelcomeKey, args.ChannelId)
+	data, appErr := p.API.KVGet(key)
+	if appErr != nil {
+		p.postCommandResponse(args, "error retrieving the welcome message for this channel: `%s`", appErr)
+		return
+	}
+
+	if data == nil {
+		p.postCommandResponse(args, "No welcome message has been set for this channel.")
+		return
+	}
+
+	post := &model.Post{
+		UserId:    p.botUserID,
+		ChannelId: args.ChannelId,
+		Message:   string(data),
+	}
+	_ = p.API.SendEphemeralPost(args.UserId, post)
+}
+
 func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs) {
 	found := false
 	for _, message := range p.getWelcomeMessages() {
@@ -132,7 +160,7 @@ func (p *Plugin) executeCommandSetWelcome(args *model.CommandArgs) {
 	}
 
 	if channelInfo.Type == model.ChannelTypePrivate {
-		p.postCommandResponse(args, "welcome messages are not supported for direct channels")
+		p.postCommandResponse(args, "welcome messages are not supported for private channels")
 		return
 	}
 
@@ -224,6 +252,9 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 	}
 
 	switch action {
+	case commandTriggerWelcome:
+		p.executeCommandWelcome(args)
+		return &model.CommandResponse{}, nil
 	case commandTriggerPreview:
 		teamName := parameters[0]
 		p.executeCommandPreview(teamName, args)
@@ -254,7 +285,10 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 
 func getAutocompleteData() *model.AutocompleteData {
 	welcomebot := model.NewAutocompleteData("welcomebot", "[command]",
-		"Available commands: preview, help, list, set_channel_welcome, get_channel_welcome, delete_channel_welcome")
+		"Available commands: welcome, preview, help, list, set_channel_welcome, get_channel_welcome, delete_channel_welcome")
+
+	welcome := model.NewAutocompleteData("welcome", "", "Show the welcome message for the current channel (only visible to you)")
+	welcomebot.AddCommand(welcome)
 
 	preview := model.NewAutocompleteData("preview", "[team-name]", "Preview the welcome message for the given team name")
 	preview.AddTextArgument("Team name to preview welcome message", "[team-name]", "")

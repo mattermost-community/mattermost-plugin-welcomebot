@@ -41,6 +41,7 @@ func (p *Plugin) constructMessageTemplate(userID, teamID string) *MessageTemplat
 	}
 
 	data.UserDisplayName = data.User.GetDisplayName(model.ShowNicknameFullName)
+	data.SiteURL = p.getSiteURL()
 
 	return data
 }
@@ -82,6 +83,7 @@ func (p *Plugin) newSampleMessageTemplate(teamName string, userID string) (*Mess
 	}
 
 	data.UserDisplayName = data.User.GetDisplayName(model.ShowNicknameFullName)
+	data.SiteURL = p.getSiteURL()
 
 	return data, nil
 }
@@ -228,12 +230,35 @@ func (p *Plugin) processActionMessage(messageTemplate MessageTemplate, action *A
 }
 
 func (p *Plugin) joinChannel(action *Action, channelName string) {
-	if channel, err := p.API.GetChannelByName(action.Context.TeamID, channelName, false); err == nil {
-		if _, err := p.API.AddChannelMember(channel.Id, action.Context.UserID); err != nil {
-			p.API.LogError("Couldn't add user to the channel, continuing to next channel", "user_id", action.Context.UserID, "channel_id", channel.Id)
-			return
-		}
-	} else {
+	channel, err := p.API.GetChannelByName(action.Context.TeamID, channelName, false)
+	if err != nil {
 		p.API.LogError("failed to get channel, continuing to the next channel", "channel_name", channelName, "user_id", action.Context.UserID)
+		return
 	}
+
+	if _, err := p.API.AddChannelMember(channel.Id, action.Context.UserID); err != nil {
+		p.API.LogError("Couldn't add user to the channel, continuing to next channel", "user_id", action.Context.UserID, "channel_id", channel.Id)
+		return
+	}
+
+	// UserHasJoinedChannel does not fire when a plugin calls AddChannelMember —
+	// Mattermost skips re-triggering the calling plugin's own hooks to prevent
+	// infinite loops. Send the channel welcome ephemeral directly here instead.
+	// UserHasJoinedChannel still handles external adds (admin or user self-join).
+	welcomeKey := fmt.Sprintf("%s%s", welcomebotChannelWelcomeKey, channel.Id)
+	data, appErr := p.API.KVGet(welcomeKey)
+	if appErr != nil || data == nil {
+		return
+	}
+
+	userID := action.Context.UserID
+	post := &model.Post{
+		UserId:    p.botUserID,
+		ChannelId: channel.Id,
+		Message:   string(data),
+	}
+	go func() {
+		time.Sleep(p.getChannelWelcomeAutoJoinDelay())
+		_ = p.API.SendEphemeralPost(userID, post)
+	}()
 }
