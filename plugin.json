@@ -15,6 +15,13 @@
     }
   },
   "settings_schema": {
-      "header": "Configure this plugin directly in the config.json file. Learn more [in our documentation](https://github.com/mattermost/mattermost-plugin-welcomebot/blob/master/README.md).\n\n To report an issue, make a suggestion, or submit a contribution, [check the plugin repository](https://github.com/mattermost/mattermost-plugin-welcomebot)."
+    "settings": [
+      {
+          "key": "WelcomeMessages",
+          "type": "longtext",
+          "display_name": "Welcome Messages:",
+          "help_text": "JSON formatted configuration for the welcome messages. See [usage here](https://github.com/mattermost/mattermost-plugin-welcomebot#usage)."
+      }
+      ]
   }
 }

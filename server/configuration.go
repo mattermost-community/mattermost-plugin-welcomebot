@@ -1,5 +1,9 @@
 package main
 
+import (
+	"encoding/json"
+)
+
 const (
 	actionTypeAutomatic = "automatic"
 	actionTypeButton    = "button"
@@ -52,6 +56,41 @@ type Configuration struct {
 // List of the welcome messages from the configuration
 func (p *Plugin) getWelcomeMessages() []*ConfigMessage {
 	return p.welcomeMessages.Load().([]*ConfigMessage)
+}
+
+// Custom JSON unmarshal function for Configuration.
+// To allow for configuration in the System Console we need to support Configuration.WelcomeMessages
+// being either a string or slice of *ConfigMessage.
+func (c *Configuration) UnmarshalJSON(b []byte) error {
+	var s struct {
+		WelcomeMessages string
+	}
+
+	err := json.Unmarshal(b, &s)
+	if err == nil {
+		var configMessages []*ConfigMessage
+		err = json.Unmarshal([]byte(s.WelcomeMessages), &configMessages)
+		if err != nil {
+			return err
+		}
+
+		c.WelcomeMessages = configMessages
+
+		return nil
+	}
+
+	var tc struct {
+		WelcomeMessages []*ConfigMessage
+	}
+
+	err = json.Unmarshal(b, &tc)
+	if err != nil {
+		return err
+	}
+
+	c.WelcomeMessages = tc.WelcomeMessages
+
+	return nil
 }
 
 // OnConfigurationChange is invoked when configuration changes may have been made.
