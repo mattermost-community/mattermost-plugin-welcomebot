@@ -155,7 +155,7 @@ func (p *Plugin) executeCommandList(args *model.CommandArgs) {
 func (p *Plugin) executeCommandSetWelcome(args *model.CommandArgs) {
 	channelInfo, appErr := p.API.GetChannel(args.ChannelId)
 	if appErr != nil {
-		p.postCommandResponse(args, "error occurred while checking the type of the chanelId `%s`: `%s`", args.ChannelId, appErr)
+		p.postCommandResponse(args, "error occurred while checking the type of the channel ID `%s`: `%s`", args.ChannelId, appErr.Error())
 		return
 	}
 
@@ -171,7 +171,7 @@ func (p *Plugin) executeCommandSetWelcome(args *model.CommandArgs) {
 
 	key := fmt.Sprintf("%s%s", welcomebotChannelWelcomeKey, args.ChannelId)
 	if appErr := p.API.KVSet(key, []byte(message)); appErr != nil {
-		p.postCommandResponse(args, "error occurred while storing the welcome message for the chanel: `%s`", appErr)
+		p.postCommandResponse(args, "error occurred while storing the welcome message for the channel: `%s`", appErr.Error())
 		return
 	}
 
@@ -182,7 +182,7 @@ func (p *Plugin) executeCommandGetWelcome(args *model.CommandArgs) {
 	key := fmt.Sprintf("%s%s", welcomebotChannelWelcomeKey, args.ChannelId)
 	data, appErr := p.API.KVGet(key)
 	if appErr != nil {
-		p.postCommandResponse(args, "error occurred while retrieving the welcome message for the chanel: `%s`", appErr)
+		p.postCommandResponse(args, "error occurred while retrieving the welcome message for the channel: `%s`", appErr.Error())
 		return
 	}
 
@@ -199,7 +199,7 @@ func (p *Plugin) executeCommandDeleteWelcome(args *model.CommandArgs) {
 	data, appErr := p.API.KVGet(key)
 
 	if appErr != nil {
-		p.postCommandResponse(args, "error occurred while retrieving the welcome message for the chanel: `%s`", appErr)
+		p.postCommandResponse(args, "error occurred while retrieving the welcome message for the channel: `%s`", appErr.Error())
 		return
 	}
 
@@ -209,7 +209,7 @@ func (p *Plugin) executeCommandDeleteWelcome(args *model.CommandArgs) {
 	}
 
 	if appErr := p.API.KVDelete(key); appErr != nil {
-		p.postCommandResponse(args, "error occurred while deleting the welcome message for the chanel: `%s`", appErr)
+		p.postCommandResponse(args, "error occurred while deleting the welcome message for the channel: `%s`", appErr.Error())
 		return
 	}
 

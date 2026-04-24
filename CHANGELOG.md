@@ -6,8 +6,9 @@ The changelog can be found at https://github.com/mattermost/mattermost-plugin-we
 
 ### Fixed
 
+- **`{{.SiteURL}}` rendered empty in button-action welcome messages.** The interactive button action flow in `ServeHTTP` built a `MessageTemplate` but never populated `SiteURL`, so any welcome message template referencing `{{.SiteURL}}` produced an empty string. Fixed by setting `data.SiteURL = p.getSiteURL()` alongside the other template fields.
 - **Nil panic in `ServeHTTP` action decoder.** When the request body decoded successfully but produced a nil action (e.g. JSON null payload), the error handler called `err.Error()` on a nil error, causing a panic. Added a nil guard so the error message is set correctly in both cases.
-- **`appErr` rendered as raw pointer in command response.** Passing a `*model.AppError` directly to a `%s` format verb produced `%!s(*model.AppError=...)` instead of the error message. Changed to `appErr.Error()`.
+- **`appErr` rendered as raw pointer in command responses.** Passing a `*model.AppError` directly to a `%s` format verb produced `%!s(*model.AppError=...)` instead of the error message. Fixed across all command response call sites in `command.go` — `executeCommandWelcome`, `executeCommandSetWelcome`, `executeCommandGetWelcome`, and `executeCommandDeleteWelcome` — to use `appErr.Error()`.
 - **Help text referred to "Direct channels" instead of "Private channels".** The `set_channel_welcome` command rejects private channels, not direct channels. The help string now matches the actual restriction.
 - **`plugin.json` setting default encoded as string instead of number.** `ChannelWelcomeAutoJoinDelaySeconds` declared `type: number` but its `default` was `"5"` (a JSON string). Changed to `5` to match the declared type and prevent System Console rendering issues.
 - **`TestFilterLogEntries/filter_out_old_entries` was flaky and failed on CI.** Two root causes: (1) `filterLogEntries` used `Before(since)` which let entries with a timestamp exactly equal to `since` pass through — changed to `!After(since)` to exclude them. (2) The test used repeated `time.Now()` calls inside the map literal for log entry timestamps, but `since` was captured earlier at line 99. On a slow CI machine the "now" entry's timestamp ended up one millisecond after `since`, causing it to slip through the filter and return 3 entries instead of 2. Fixed by anchoring all timestamps in the test to the same `now` variable used for `since`.
@@ -36,7 +37,7 @@ The changelog can be found at https://github.com/mattermost/mattermost-plugin-we
 
 - **`/welcomebot welcome` command.** Any user can run this in any channel to re-show that channel's welcome message as an ephemeral visible only to them. The primary recovery path for missed welcomes — see known limitations below.
 
-- **`POST /admin/set_channel_welcome` endpoint.** Allows system admins to set channel welcome messages programmatically. Accepts `{"channel_id": "...", "message": "..."}` with a Bearer token. Intended for setup scripts and administrative automation.
+- **`POST /admin/set_channel_welcome` endpoint.** Allows system admins to set channel welcome messages programmatically. Accepts `{"channel_id": "...", "message": "..."}`. Callers authenticate to the Mattermost server using `Authorization: Bearer <token>` (a personal access token or session token); Mattermost authenticates the request and injects `Mattermost-User-Id`, which the plugin uses to verify system admin role. Intended for setup scripts and administrative automation.
 
 ### Known Limitations
 

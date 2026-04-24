@@ -61,6 +61,7 @@ func (p *Plugin) ServeHTTP(_ *plugin.Context, w http.ResponseWriter, r *http.Req
 	}
 
 	data.UserDisplayName = data.User.GetDisplayName(model.ShowNicknameFullName)
+	data.SiteURL = p.getSiteURL()
 
 	// Check to make sure you're still in the team
 	if teamMember, err := p.API.GetTeamMember(action.Context.TeamID, action.Context.UserID); err != nil || teamMember == nil || teamMember.DeleteAt > 0 {
