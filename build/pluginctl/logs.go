@@ -146,7 +146,7 @@ func filterLogEntries(logs []string, pluginID string, since time.Time) ([]string
 		if err != nil {
 			return nil, fmt.Errorf("unknown timestamp format: %w", err)
 		}
-		if let.Before(since) {
+		if !let.After(since) {
 			continue
 		}
 

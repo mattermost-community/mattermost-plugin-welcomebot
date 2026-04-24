@@ -10,4 +10,5 @@ type MessageTemplate struct {
 	Townsquare      *model.Channel
 	DirectMessage   *model.Channel
 	UserDisplayName string
+	SiteURL         string
 }

@@ -1,5 +1,7 @@
 package main
 
+import "time"
+
 const (
 	actionTypeAutomatic = "automatic"
 	actionTypeButton    = "button"
@@ -44,14 +46,34 @@ type ConfigMessage struct {
 	IncludeGuests bool
 }
 
+// defaultAutoJoinDelaySeconds is used when ChannelWelcomeAutoJoinDelaySeconds
+// is not set or is set to zero. 5 seconds gives most clients enough time to
+// render the channel before the ephemeral arrives.
+const defaultAutoJoinDelaySeconds = 5
+
 // Configuration from config.json
 type Configuration struct {
 	WelcomeMessages []*ConfigMessage
+
+	// ChannelWelcomeAutoJoinDelaySeconds controls how long the plugin waits before
+	// sending the channel welcome ephemeral. Increase if users report that the
+	// welcome appears before the channel has fully loaded. Defaults to 5 seconds.
+	ChannelWelcomeAutoJoinDelaySeconds int
 }
 
-// List of the welcome messages from the configuration
+// getWelcomeMessages returns the list of welcome messages from configuration.
 func (p *Plugin) getWelcomeMessages() []*ConfigMessage {
 	return p.welcomeMessages.Load().([]*ConfigMessage)
+}
+
+// getChannelWelcomeAutoJoinDelay returns the configured delay, falling back to
+// defaultAutoJoinDelaySeconds if the value was not set.
+func (p *Plugin) getChannelWelcomeAutoJoinDelay() time.Duration {
+	d := p.channelWelcomeAutoJoinDelay.Load()
+	if d <= 0 {
+		d = defaultAutoJoinDelaySeconds
+	}
+	return time.Duration(d) * time.Second
 }
 
 // OnConfigurationChange is invoked when configuration changes may have been made.
@@ -63,7 +85,16 @@ func (p *Plugin) OnConfigurationChange() error {
 		return err
 	}
 
+	if c.WelcomeMessages == nil {
+		c.WelcomeMessages = []*ConfigMessage{}
+	}
 	p.welcomeMessages.Store(c.WelcomeMessages)
+
+	delay := c.ChannelWelcomeAutoJoinDelaySeconds
+	if delay <= 0 {
+		delay = defaultAutoJoinDelaySeconds
+	}
+	p.channelWelcomeAutoJoinDelay.Store(int64(delay))
 
 	return nil
 }

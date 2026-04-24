@@ -8,15 +8,17 @@ import (
 	"github.com/mattermost/mattermost/server/public/plugin"
 )
 
-const commandHelp = `* |/welcomebot preview [team-name] | - preview the welcome message for the given team name. The current user's username will be used to render the template.
+const commandHelp = `* |/welcomebot welcome| - show the welcome message for the current channel (visible only to you). Useful if you were auto-joined and missed it.
+* |/welcomebot preview [team-name] | - preview the welcome message for the given team name. The current user's username will be used to render the template.
 * |/welcomebot list| - list the teams for which welcome messages were defined.
 The following commands will only be allowed to be run by system admins and users with permission to manage channel roles. |set_channel_welcome|, |get_channel_welcome| and |delete_channel_welcome|.
-* |/welcomebot set_channel_welcome [welcome-message]| - set the welcome message for the given channel. Direct channels are not supported.
+* |/welcomebot set_channel_welcome [welcome-message]| - set the welcome message for the given channel. Only open channels are supported.
 * |/welcomebot get_channel_welcome| - print the welcome message set for the given channel (if any)
 * |/welcomebot delete_channel_welcome| - delete the welcome message for the given channel (if any)
 `
 
 const (
+	commandTriggerWelcome              = "welcome"
 	commandTriggerPreview              = "preview"
 	commandTriggerList                 = "list"
 	commandTriggerSetChannelWelcome    = "set_channel_welcome"
@@ -31,7 +33,7 @@ func getCommand() *model.Command {
 		DisplayName:      "welcomebot",
 		Description:      "Welcome Bot helps add new team members to channels.",
 		AutoComplete:     true,
-		AutoCompleteDesc: "Available commands: preview, help, list, set_channel_welcome, get_channel_welcome, delete_channel_welcome",
+		AutoCompleteDesc: "Available commands: welcome, preview, help, list, set_channel_welcome, get_channel_welcome, delete_channel_welcome",
 		AutoCompleteHint: "[command]",
 		AutocompleteData: getAutocompleteData(),
 	}
@@ -47,14 +49,14 @@ func (p *Plugin) postCommandResponse(args *model.CommandArgs, text string, textA
 }
 
 func (p *Plugin) hasSysadminRole(userID string) (bool, error) {
-	user, appErr := p.API.GetUser(userID)
-	if appErr != nil {
+	// Use the plugin API permission helper rather than a substring match on
+	// user.Roles — HasPermissionTo checks exact role/permission grants and is
+	// the correct approach for gating admin HTTP endpoints.
+	// GetUser first to confirm the user exists and surface a clean error.
+	if _, appErr := p.API.GetUser(userID); appErr != nil {
 		return false, appErr
 	}
-	if !strings.Contains(user.Roles, "system_admin") {
-		return false, nil
-	}
-	return true, nil
+	return p.API.HasPermissionTo(userID, model.PermissionManageSystem), nil
 }
 
 func (p *Plugin) validateCommand(action string, parameters []string) string {
@@ -79,9 +81,49 @@ func (p *Plugin) validateCommand(action string, parameters []string) string {
 		if len(parameters) > 0 {
 			return "`delete_channel_welcome` command does not accept any extra parameters"
 		}
+	case commandTriggerWelcome:
+		if len(parameters) > 0 {
+			return "`welcome` command does not accept any extra parameters"
+		}
 	}
 
 	return ""
+}
+
+// executeCommandWelcome re-sends the channel welcome message as an ephemeral post
+// visible only to the user who ran the command. Any user can run this — it is the
+// self-service way to see a channel's welcome message after being auto-joined and
+// missing the initial ephemeral (which only fires if the user is actively viewing
+// the channel at join time).
+func (p *Plugin) executeCommandWelcome(args *model.CommandArgs) {
+	channelInfo, appErr := p.API.GetChannel(args.ChannelId)
+	if appErr != nil {
+		p.postCommandResponse(args, "error occurred while checking the channel: `%s`", appErr.Error())
+		return
+	}
+	if channelInfo.Type != model.ChannelTypeOpen {
+		p.postCommandResponse(args, "welcome messages are only supported for open channels")
+		return
+	}
+
+	key := fmt.Sprintf("%s%s", welcomebotChannelWelcomeKey, args.ChannelId)
+	data, appErr := p.API.KVGet(key)
+	if appErr != nil {
+		p.postCommandResponse(args, "error retrieving the welcome message for this channel: `%s`", appErr.Error())
+		return
+	}
+
+	if data == nil {
+		p.postCommandResponse(args, "No welcome message has been set for this channel.")
+		return
+	}
+
+	post := &model.Post{
+		UserId:    p.botUserID,
+		ChannelId: args.ChannelId,
+		Message:   string(data),
+	}
+	_ = p.API.SendEphemeralPost(args.UserId, post)
 }
 
 func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs) {
@@ -103,16 +145,16 @@ func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs)
 }
 
 func (p *Plugin) executeCommandList(args *model.CommandArgs) {
-	wecomeMessages := p.getWelcomeMessages()
+	welcomeMessages := p.getWelcomeMessages()
 
-	if len(wecomeMessages) == 0 {
+	if len(welcomeMessages) == 0 {
 		p.postCommandResponse(args, "There are no welcome messages defined")
 		return
 	}
 
 	// Deduplicate entries
 	teams := make(map[string]struct{})
-	for _, message := range wecomeMessages {
+	for _, message := range welcomeMessages {
 		teams[message.TeamName] = struct{}{}
 	}
 
@@ -127,12 +169,12 @@ func (p *Plugin) executeCommandList(args *model.CommandArgs) {
 func (p *Plugin) executeCommandSetWelcome(args *model.CommandArgs) {
 	channelInfo, appErr := p.API.GetChannel(args.ChannelId)
 	if appErr != nil {
-		p.postCommandResponse(args, "error occurred while checking the type of the chanelId `%s`: `%s`", args.ChannelId, appErr)
+		p.postCommandResponse(args, "error occurred while checking the type of the channel ID `%s`: `%s`", args.ChannelId, appErr.Error())
 		return
 	}
 
-	if channelInfo.Type == model.ChannelTypePrivate {
-		p.postCommandResponse(args, "welcome messages are not supported for direct channels")
+	if channelInfo.Type != model.ChannelTypeOpen {
+		p.postCommandResponse(args, "welcome messages are only supported for open channels")
 		return
 	}
 
@@ -143,7 +185,7 @@ func (p *Plugin) executeCommandSetWelcome(args *model.CommandArgs) {
 
 	key := fmt.Sprintf("%s%s", welcomebotChannelWelcomeKey, args.ChannelId)
 	if appErr := p.API.KVSet(key, []byte(message)); appErr != nil {
-		p.postCommandResponse(args, "error occurred while storing the welcome message for the chanel: `%s`", appErr)
+		p.postCommandResponse(args, "error occurred while storing the welcome message for the channel: `%s`", appErr.Error())
 		return
 	}
 
@@ -154,7 +196,7 @@ func (p *Plugin) executeCommandGetWelcome(args *model.CommandArgs) {
 	key := fmt.Sprintf("%s%s", welcomebotChannelWelcomeKey, args.ChannelId)
 	data, appErr := p.API.KVGet(key)
 	if appErr != nil {
-		p.postCommandResponse(args, "error occurred while retrieving the welcome message for the chanel: `%s`", appErr)
+		p.postCommandResponse(args, "error occurred while retrieving the welcome message for the channel: `%s`", appErr.Error())
 		return
 	}
 
@@ -171,7 +213,7 @@ func (p *Plugin) executeCommandDeleteWelcome(args *model.CommandArgs) {
 	data, appErr := p.API.KVGet(key)
 
 	if appErr != nil {
-		p.postCommandResponse(args, "error occurred while retrieving the welcome message for the chanel: `%s`", appErr)
+		p.postCommandResponse(args, "error occurred while retrieving the welcome message for the channel: `%s`", appErr.Error())
 		return
 	}
 
@@ -181,7 +223,7 @@ func (p *Plugin) executeCommandDeleteWelcome(args *model.CommandArgs) {
 	}
 
 	if appErr := p.API.KVDelete(key); appErr != nil {
-		p.postCommandResponse(args, "error occurred while deleting the welcome message for the chanel: `%s`", appErr)
+		p.postCommandResponse(args, "error occurred while deleting the welcome message for the channel: `%s`", appErr.Error())
 		return
 	}
 
@@ -224,6 +266,9 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 	}
 
 	switch action {
+	case commandTriggerWelcome:
+		p.executeCommandWelcome(args)
+		return &model.CommandResponse{}, nil
 	case commandTriggerPreview:
 		teamName := parameters[0]
 		p.executeCommandPreview(teamName, args)
@@ -254,7 +299,10 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 
 func getAutocompleteData() *model.AutocompleteData {
 	welcomebot := model.NewAutocompleteData("welcomebot", "[command]",
-		"Available commands: preview, help, list, set_channel_welcome, get_channel_welcome, delete_channel_welcome")
+		"Available commands: welcome, preview, help, list, set_channel_welcome, get_channel_welcome, delete_channel_welcome")
+
+	welcome := model.NewAutocompleteData("welcome", "", "Show the welcome message for the current channel (only visible to you)")
+	welcomebot.AddCommand(welcome)
 
 	preview := model.NewAutocompleteData("preview", "[team-name]", "Preview the welcome message for the given team name")
 	preview.AddTextArgument("Team name to preview welcome message", "[team-name]", "")

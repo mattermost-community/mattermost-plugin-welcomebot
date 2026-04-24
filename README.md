@@ -86,6 +86,73 @@ The preview of the configured messages, as well as the creation of a channel wel
 * `/welcomebot set_channel_welcome [welcome-message]` - Sets the given text as current's channel welcome message.
 * `/welcomebot get_channel_welcome` - Gets the current channel's welcome message.
 * `/welcomebot delete_channel_welcome` - Deletes the current channel's welcome message.
+* `/welcomebot welcome` - Re-shows the current channel's welcome message as an ephemeral visible only to you. Use this if you missed the welcome when you first joined.
+
+## Channel Welcome Messages
+
+Channel welcome messages are separate from team welcome messages. Where a team welcome is a DM sent when a user joins the team, a channel welcome is an ephemeral post sent when a user joins a specific channel — visible only to that user and not stored in the channel history.
+
+Channel welcome messages are stored in the plugin's KV store and are set per-channel. They are sent as plain text/Markdown exactly as stored — Go template variables such as `{{.UserDisplayName}}` and `{{.SiteURL}}` are not expanded. Only open (public) channels are supported.
+
+### Setting a channel welcome manually
+
+Navigate to the channel and run:
+
+```
+/welcomebot set_channel_welcome Your welcome message here.
+```
+
+Requires system admin or channel admin role. To verify what is stored:
+
+```
+/welcomebot get_channel_welcome
+```
+
+To remove it:
+
+```
+/welcomebot delete_channel_welcome
+```
+
+### Setting channel welcomes programmatically
+
+Use the `POST /admin/set_channel_welcome` endpoint to set channel welcome messages from a script without having to manually run slash commands in each channel. This is the recommended approach for initial setup.
+
+```bash
+# Resolve the channel ID
+CHANNEL_ID=$(mmctl channel list engineering --json | jq -r '.[] | select(.name=="general") | .id')
+
+# Set the welcome message
+curl -X POST \
+  -H "Authorization: Bearer <your-personal-access-token>" \
+  -H "Content-Type: application/json" \
+  -d "{\"channel_id\": \"${CHANNEL_ID}\", \"message\": \"Welcome to #general!\"}" \
+  http://<your-mattermost-url>/plugins/com.mattermost.welcomebot/admin/set_channel_welcome
+```
+
+The caller must be a system admin. The bearer token authenticates to Mattermost, which injects `Mattermost-User-Id` into the request for the plugin to verify. Private channels are not supported — welcome messages only fire on public channel joins.
+
+### Re-showing a missed welcome
+
+Channel welcome ephemerals are not stored server-side. If a user missed the welcome when they joined, they can re-show it at any time:
+
+```
+/welcomebot welcome
+```
+
+This works in any channel that has a welcome message configured.
+
+## Known Limitations
+
+### Channel welcome ephemerals can be missed on auto-join
+
+Channel welcome ephemerals work reliably on a user's **first-ever join** to a team. At that point, the auto-added channels are cold in the client — no cached state exists — so when the user navigates to each channel, the ephemeral is still live in the WebSocket buffer and renders correctly.
+
+On **rejoin** (the user left the team and rejoined), the client already has those channels in its local store. When the user opens a channel, the client rehydrates the post list from the server. Because the server never stores ephemerals, the welcome is gone before the page renders and the user never sees it.
+
+This is a Mattermost platform limitation. The server does not provide a `UserHasViewedChannel` hook or any equivalent event that would allow the plugin to trigger delivery at the moment the user first opens a channel. There is no workaround that guarantees delivery on rejoin without user action.
+
+**Recovery:** Run `/welcomebot welcome` in any channel to re-show its welcome message as an ephemeral visible only to you. Mention this command in your onboarding documentation so new users know it exists.
 
 ## Example
 
@@ -200,6 +267,7 @@ type MessageTemplate struct {
     Townsquare      *model.Channel
     DirectMessage   *model.Channel
     UserDisplayName string
+    SiteURL         string
 }
 ```
 
