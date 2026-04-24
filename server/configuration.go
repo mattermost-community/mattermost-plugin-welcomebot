@@ -1,5 +1,9 @@
 package main
 
+import (
+	"fmt"
+)
+
 const (
 	actionTypeAutomatic = "automatic"
 	actionTypeButton    = "button"
@@ -66,4 +70,19 @@ func (p *Plugin) OnConfigurationChange() error {
 	p.welcomeMessages.Store(c.WelcomeMessages)
 
 	return nil
+}
+
+// Takes a teamID to construct the correct key, and then retrieve the necessary value from the pair stored in the DB
+func (p *Plugin) GetTeamWelcomeMessageFromKV(teamID string) (string, error) {
+	key := makeTeamWelcomeMessageKey(teamID)
+	var message string
+	if err := p.client.KV.Get(key, &message); err != nil {
+		return "", err
+	}
+
+	return message, nil
+}
+
+func makeTeamWelcomeMessageKey(teamID string) string {
+	return fmt.Sprintf("%s%s", welcomebotTeamWelcomeKey, teamID)
 }

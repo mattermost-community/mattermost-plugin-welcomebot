@@ -6,7 +6,6 @@ import (
 
 	"github.com/mattermost/mattermost/server/public/model"
 	"github.com/mattermost/mattermost/server/public/plugin"
-	"github.com/mattermost/mattermost/server/public/shared/mlog"
 )
 
 // UserHasJoinedTeam is invoked after the membership has been committed to the database. If
@@ -17,27 +16,45 @@ func (p *Plugin) UserHasJoinedTeam(c *plugin.Context, teamMember *model.TeamMemb
 		return
 	}
 
-	for _, message := range p.getWelcomeMessages() {
-		if data.User.IsGuest() && !message.IncludeGuests {
-			continue
-		}
+	teamMessage, err := p.GetTeamWelcomeMessageFromKV(teamMember.TeamId)
+	if err != nil {
+		p.client.Log.Error("Error occurred while retrieving the welcome message", "TeamID", teamMember.TeamId, "Error", err.Error())
+		return
+	}
 
-		if message.TeamName == data.Team.Name {
-			go p.processWelcomeMessage(*data, *message)
+	if teamMessage == "" {
+		// No dynamic welcome message for the given team, so we check if one has been set in the config.json
+		for _, message := range p.getWelcomeMessages() {
+			if data.User.IsGuest() && !message.IncludeGuests {
+				continue
+			}
+			if message.TeamName == data.Team.Name {
+				go p.processWelcomeMessage(*data, *message)
+			}
 		}
+		return
+	}
+
+	// We send a DM and an opportunistic ephemeral message to the channel. See
+	// the discussion at the link below for more details:
+	// https://github.com/mattermost/mattermost-plugin-welcomebot/pull/31#issuecomment-611691023
+	postDM := &model.Post{
+		UserId:    p.botUserID,
+		ChannelId: data.DirectMessage.Id,
+		Message:   teamMessage,
+	}
+	if err := p.client.Post.CreatePost(postDM); err != nil {
+		p.client.Log.Error("failed to post welcome message to the channel", "ChannelID", data.DirectMessage.Id, "Error", err.Error())
 	}
 }
 
 // UserHasJoinedChannel is invoked after the membership has been committed to
 // the database. If actor is not nil, the user was invited to the channel by
 // the actor.
-func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.ChannelMember, _ *model.User) {
-	if channelInfo, appErr := p.API.GetChannel(channelMember.ChannelId); appErr != nil {
-		mlog.Error(
-			"error occurred while checking the type of the chanel",
-			mlog.String("channelId", channelMember.ChannelId),
-			mlog.Err(appErr),
-		)
+func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.ChannelMember, actor *model.User) {
+	channelInfo, err := p.client.Channel.Get(channelMember.ChannelId)
+	if err != nil {
+		p.client.Log.Error("Error occurred while checking the type of the chanel", "ChannelID", channelMember.ChannelId, "Error", err.Error())
 		return
 	} else if channelInfo.Type == model.ChannelTypePrivate {
 		return
@@ -46,11 +63,7 @@ func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.Ch
 	key := fmt.Sprintf("%s%s", welcomebotChannelWelcomeKey, channelMember.ChannelId)
 	data, appErr := p.API.KVGet(key)
 	if appErr != nil {
-		mlog.Error(
-			"error occurred while retrieving the welcome message",
-			mlog.String("channelId", channelMember.ChannelId),
-			mlog.Err(appErr),
-		)
+		p.client.Log.Error("Error occurred while retrieving the welcome message", "ChannelID", channelMember.ChannelId, "Error", appErr.Message)
 		return
 	}
 
@@ -59,13 +72,9 @@ func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.Ch
 		return
 	}
 
-	dmChannel, err := p.API.GetDirectChannel(channelMember.UserId, p.botUserID)
+	dmChannel, err := p.client.Channel.GetDirect(channelMember.UserId, p.botUserID)
 	if err != nil {
-		mlog.Error(
-			"error occurred while creating direct channel to the user",
-			mlog.String("UserId", channelMember.UserId),
-			mlog.Err(err),
-		)
+		p.client.Log.Error("Error occurred while creating direct channel to the user", "UserID", channelMember.UserId, "Error", err.Error())
 		return
 	}
 
@@ -77,11 +86,8 @@ func (p *Plugin) UserHasJoinedChannel(c *plugin.Context, channelMember *model.Ch
 		ChannelId: dmChannel.Id,
 		Message:   string(data),
 	}
-	if _, appErr := p.API.CreatePost(postDM); appErr != nil {
-		mlog.Error("failed to post welcome message to the channel",
-			mlog.String("channelId", dmChannel.Id),
-			mlog.Err(appErr),
-		)
+	if err := p.client.Post.CreatePost(postDM); err != nil {
+		p.client.Log.Error("failed to post welcome message to the channel", "ChannelID", dmChannel.Id, "Error", err.Error())
 	}
 
 	postChannel := &model.Post{
