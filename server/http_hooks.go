@@ -144,17 +144,19 @@ func (p *Plugin) handleAdminSetChannelWelcome(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Private channels are intentionally unsupported. Reject early so setup
-	// scripts get a clear error rather than silently storing a message that
-	// will never be delivered.
+	// Only open channels support join-based welcomes. Reject private, direct,
+	// and group channels early so setup scripts get a clear error rather than
+	// silently storing a message that will never be delivered.
 	channelInfo, appErr := p.API.GetChannel(req.ChannelID)
 	if appErr != nil {
 		p.API.LogError("failed to look up channel", "channel_id", req.ChannelID, "error", appErr.Error())
 		http.Error(w, "channel not found", http.StatusBadRequest)
 		return
 	}
-	if channelInfo.Type == model.ChannelTypePrivate {
-		http.Error(w, "welcome messages are not supported for private channels", http.StatusBadRequest)
+	if channelInfo.Type == model.ChannelTypePrivate ||
+		channelInfo.Type == model.ChannelTypeDirect ||
+		channelInfo.Type == model.ChannelTypeGroup {
+		http.Error(w, "welcome messages are only supported for open channels", http.StatusBadRequest)
 		return
 	}
 

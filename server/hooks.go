@@ -34,7 +34,7 @@ func (p *Plugin) UserHasJoinedTeam(_ *plugin.Context, teamMember *model.TeamMemb
 func (p *Plugin) UserHasJoinedChannel(_ *plugin.Context, channelMember *model.ChannelMember, actor *model.User) {
 	if channelInfo, appErr := p.API.GetChannel(channelMember.ChannelId); appErr != nil {
 		mlog.Error(
-			"error occurred while checking the type of the chanel",
+			"error occurred while checking the type of the channel",
 			mlog.String("channelId", channelMember.ChannelId),
 			mlog.Err(appErr),
 		)

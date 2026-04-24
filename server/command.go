@@ -49,14 +49,14 @@ func (p *Plugin) postCommandResponse(args *model.CommandArgs, text string, textA
 }
 
 func (p *Plugin) hasSysadminRole(userID string) (bool, error) {
-	user, appErr := p.API.GetUser(userID)
-	if appErr != nil {
+	// Use the plugin API permission helper rather than a substring match on
+	// user.Roles — HasPermissionTo checks exact role/permission grants and is
+	// the correct approach for gating admin HTTP endpoints.
+	// GetUser first to confirm the user exists and surface a clean error.
+	if _, appErr := p.API.GetUser(userID); appErr != nil {
 		return false, appErr
 	}
-	if !strings.Contains(user.Roles, "system_admin") {
-		return false, nil
-	}
-	return true, nil
+	return p.API.HasPermissionTo(userID, model.PermissionManageSystem), nil
 }
 
 func (p *Plugin) validateCommand(action string, parameters []string) string {
@@ -96,6 +96,18 @@ func (p *Plugin) validateCommand(action string, parameters []string) string {
 // missing the initial ephemeral (which only fires if the user is actively viewing
 // the channel at join time).
 func (p *Plugin) executeCommandWelcome(args *model.CommandArgs) {
+	channelInfo, appErr := p.API.GetChannel(args.ChannelId)
+	if appErr != nil {
+		p.postCommandResponse(args, "error occurred while checking the channel: `%s`", appErr.Error())
+		return
+	}
+	if channelInfo.Type == model.ChannelTypePrivate ||
+		channelInfo.Type == model.ChannelTypeDirect ||
+		channelInfo.Type == model.ChannelTypeGroup {
+		p.postCommandResponse(args, "welcome messages are only supported for open channels")
+		return
+	}
+
 	key := fmt.Sprintf("%s%s", welcomebotChannelWelcomeKey, args.ChannelId)
 	data, appErr := p.API.KVGet(key)
 	if appErr != nil {

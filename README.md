@@ -92,7 +92,7 @@ The preview of the configured messages, as well as the creation of a channel wel
 
 Channel welcome messages are separate from team welcome messages. Where a team welcome is a DM sent when a user joins the team, a channel welcome is an ephemeral post sent when a user joins a specific channel — visible only to that user and not stored in the channel history.
 
-Channel welcome messages are stored in the plugin's KV store and are set per-channel. They support the same Go template variables as team welcome messages (`{{.UserDisplayName}}`, `{{.SiteURL}}`, etc.).
+Channel welcome messages are stored in the plugin's KV store and are set per-channel. They are sent as plain text/Markdown exactly as stored — Go template variables such as `{{.UserDisplayName}}` and `{{.SiteURL}}` are not expanded. Only open (public) channels are supported.
 
 ### Setting a channel welcome manually
 
