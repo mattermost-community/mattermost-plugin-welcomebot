@@ -32,6 +32,15 @@ func (p *Plugin) ServeHTTP(_ *plugin.Context, w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// Guard against a well-formed JSON body that decodes to a non-nil Action
+	// but has a nil Context (e.g. {} or {"context":null}). Dereferencing
+	// action.Context.UserID without this check would panic the plugin.
+	if action.Context == nil || action.Context.UserID == "" || action.Context.TeamID == "" {
+		p.API.LogDebug("action decoded but context is missing or incomplete")
+		p.encodeEphemeralMessage(w, "WelcomeBot Error: We could not decode the action")
+		return
+	}
+
 	mattermostUserID := r.Header.Get("Mattermost-User-Id")
 	if mattermostUserID == "" || mattermostUserID != action.Context.UserID {
 		p.API.LogError("http request not authenticated: no Mattermost-User-Id")
