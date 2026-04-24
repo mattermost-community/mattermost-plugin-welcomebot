@@ -233,6 +233,8 @@ func (p *Plugin) joinChannel(action *Action, channelName string) {
 			p.API.LogError("Couldn't add user to the channel, continuing to next channel", "user_id", action.Context.UserID, "channel_id", channel.Id)
 			return
 		}
+
+		time.Sleep(time.Second)
 	} else {
 		p.API.LogError("failed to get channel, continuing to the next channel", "channel_name", channelName, "user_id", action.Context.UserID)
 	}
