@@ -236,10 +236,10 @@ func (p *Plugin) joinChannel(action *Action, channelName string) {
 		return
 	}
 
-	// Channel welcomes are not supported for private channels — skip the add
-	// entirely so auto-join config cannot accidentally welcome users in private
-	// channels regardless of what is stored in the KV store.
-	if channel.Type == model.ChannelTypePrivate {
+	// Channel welcomes are only supported for open channels — skip the add
+	// entirely so auto-join config cannot accidentally welcome users into
+	// private, direct, or group channels regardless of KV store contents.
+	if channel.Type != model.ChannelTypeOpen {
 		return
 	}
 

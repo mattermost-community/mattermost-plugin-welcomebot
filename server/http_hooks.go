@@ -74,7 +74,11 @@ func (p *Plugin) ServeHTTP(_ *plugin.Context, w http.ResponseWriter, r *http.Req
 
 	// Check to make sure you're still in the team
 	if teamMember, err := p.API.GetTeamMember(action.Context.TeamID, action.Context.UserID); err != nil || teamMember == nil || teamMember.DeleteAt > 0 {
-		p.API.LogError("Didn't have access to team", "user_id", action.Context.UserID, "team_id", action.Context.TeamID, "error", err.Error())
+		errMsg := ""
+		if err != nil {
+			errMsg = err.Error()
+		}
+		p.API.LogError("Didn't have access to team", "user_id", action.Context.UserID, "team_id", action.Context.TeamID, "error", errMsg)
 		p.encodeEphemeralMessage(w, "WelcomeBot Error: You do not appear to have access to this team")
 		return
 	}
@@ -144,18 +148,16 @@ func (p *Plugin) handleAdminSetChannelWelcome(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Only open channels support join-based welcomes. Reject private, direct,
-	// and group channels early so setup scripts get a clear error rather than
-	// silently storing a message that will never be delivered.
+	// Only open channels support join-based welcomes. Reject everything else
+	// early so setup scripts get a clear error rather than silently storing a
+	// message that will never be delivered.
 	channelInfo, appErr := p.API.GetChannel(req.ChannelID)
 	if appErr != nil {
 		p.API.LogError("failed to look up channel", "channel_id", req.ChannelID, "error", appErr.Error())
 		http.Error(w, "channel not found", http.StatusBadRequest)
 		return
 	}
-	if channelInfo.Type == model.ChannelTypePrivate ||
-		channelInfo.Type == model.ChannelTypeDirect ||
-		channelInfo.Type == model.ChannelTypeGroup {
+	if channelInfo.Type != model.ChannelTypeOpen {
 		http.Error(w, "welcome messages are only supported for open channels", http.StatusBadRequest)
 		return
 	}
@@ -177,12 +179,9 @@ func (p *Plugin) handleAdminSetChannelWelcome(w http.ResponseWriter, r *http.Req
 
 func (p *Plugin) encodeEphemeralMessage(w http.ResponseWriter, message string) {
 	w.Header().Set("Content-Type", "application/json")
-
 	resp := model.PostActionIntegrationResponse{
 		EphemeralText: message,
 	}
-
-	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		p.API.LogWarn("failed to write PostActionIntegrationResponse")
 	}

@@ -12,7 +12,7 @@ const commandHelp = `* |/welcomebot welcome| - show the welcome message for the 
 * |/welcomebot preview [team-name] | - preview the welcome message for the given team name. The current user's username will be used to render the template.
 * |/welcomebot list| - list the teams for which welcome messages were defined.
 The following commands will only be allowed to be run by system admins and users with permission to manage channel roles. |set_channel_welcome|, |get_channel_welcome| and |delete_channel_welcome|.
-* |/welcomebot set_channel_welcome [welcome-message]| - set the welcome message for the given channel. Private channels are not supported.
+* |/welcomebot set_channel_welcome [welcome-message]| - set the welcome message for the given channel. Only open channels are supported.
 * |/welcomebot get_channel_welcome| - print the welcome message set for the given channel (if any)
 * |/welcomebot delete_channel_welcome| - delete the welcome message for the given channel (if any)
 `
@@ -101,9 +101,7 @@ func (p *Plugin) executeCommandWelcome(args *model.CommandArgs) {
 		p.postCommandResponse(args, "error occurred while checking the channel: `%s`", appErr.Error())
 		return
 	}
-	if channelInfo.Type == model.ChannelTypePrivate ||
-		channelInfo.Type == model.ChannelTypeDirect ||
-		channelInfo.Type == model.ChannelTypeGroup {
+	if channelInfo.Type != model.ChannelTypeOpen {
 		p.postCommandResponse(args, "welcome messages are only supported for open channels")
 		return
 	}
@@ -147,16 +145,16 @@ func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs)
 }
 
 func (p *Plugin) executeCommandList(args *model.CommandArgs) {
-	wecomeMessages := p.getWelcomeMessages()
+	welcomeMessages := p.getWelcomeMessages()
 
-	if len(wecomeMessages) == 0 {
+	if len(welcomeMessages) == 0 {
 		p.postCommandResponse(args, "There are no welcome messages defined")
 		return
 	}
 
 	// Deduplicate entries
 	teams := make(map[string]struct{})
-	for _, message := range wecomeMessages {
+	for _, message := range welcomeMessages {
 		teams[message.TeamName] = struct{}{}
 	}
 
@@ -175,8 +173,8 @@ func (p *Plugin) executeCommandSetWelcome(args *model.CommandArgs) {
 		return
 	}
 
-	if channelInfo.Type == model.ChannelTypePrivate {
-		p.postCommandResponse(args, "welcome messages are not supported for private channels")
+	if channelInfo.Type != model.ChannelTypeOpen {
+		p.postCommandResponse(args, "welcome messages are only supported for open channels")
 		return
 	}
 
