@@ -135,9 +135,9 @@ func (p *Plugin) handleAdminSetChannelWelcome(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Block private channels — UserHasJoinedChannel skips them, so a welcome
-	// message stored here would never fire. Reject early so setup scripts get
-	// a clear error rather than silently doing nothing.
+	// Private channels are intentionally unsupported. Reject early so setup
+	// scripts get a clear error rather than silently storing a message that
+	// will never be delivered.
 	channelInfo, appErr := p.API.GetChannel(req.ChannelID)
 	if appErr != nil {
 		p.API.LogError("failed to look up channel", "channel_id", req.ChannelID, "error", appErr.Error())

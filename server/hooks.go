@@ -67,11 +67,11 @@ func (p *Plugin) UserHasJoinedChannel(_ *plugin.Context, channelMember *model.Ch
 		return
 	}
 
-	// Send the welcome as an ephemeral post after a short delay. Ephemerals are
-	// delivered to the user's client via WebSocket and remain in the channel's
-	// post list for the duration of the session — the user sees it automatically
-	// when they navigate to the channel, with no action required on their part.
-	// The delay gives the client time to render the channel before the post lands.
+	// Send the welcome as a best-effort ephemeral post after a short delay.
+	// Ephemerals are delivered to the active client session and are not persisted
+	// server-side, so users can still miss them depending on client state/timing.
+	// The delay gives the client a better chance to render the channel before the
+	// post is sent.
 	delay := p.getChannelWelcomeAutoJoinDelay()
 	post := &model.Post{
 		UserId:    p.botUserID,

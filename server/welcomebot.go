@@ -236,6 +236,13 @@ func (p *Plugin) joinChannel(action *Action, channelName string) {
 		return
 	}
 
+	// Channel welcomes are not supported for private channels — skip the add
+	// entirely so auto-join config cannot accidentally welcome users in private
+	// channels regardless of what is stored in the KV store.
+	if channel.Type == model.ChannelTypePrivate {
+		return
+	}
+
 	if _, err := p.API.AddChannelMember(channel.Id, action.Context.UserID); err != nil {
 		p.API.LogError("Couldn't add user to the channel, continuing to next channel", "user_id", action.Context.UserID, "channel_id", channel.Id)
 		return

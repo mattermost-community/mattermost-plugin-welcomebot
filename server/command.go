@@ -81,6 +81,10 @@ func (p *Plugin) validateCommand(action string, parameters []string) string {
 		if len(parameters) > 0 {
 			return "`delete_channel_welcome` command does not accept any extra parameters"
 		}
+	case commandTriggerWelcome:
+		if len(parameters) > 0 {
+			return "`welcome` command does not accept any extra parameters"
+		}
 	}
 
 	return ""
