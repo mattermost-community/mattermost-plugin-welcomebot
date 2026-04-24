@@ -2,25 +2,7 @@
 
 The changelog can be found at https://github.com/mattermost/mattermost-plugin-welcomebot/releases.
 
-## v1.4.1 — 2026-04-23
-
-### Fixed
-
-- **`{{.SiteURL}}` rendered empty in button-action welcome messages.** The interactive button action flow in `ServeHTTP` built a `MessageTemplate` but never populated `SiteURL`, so any welcome message template referencing `{{.SiteURL}}` produced an empty string. Fixed by setting `data.SiteURL = p.getSiteURL()` alongside the other template fields.
-- **Nil panic in `ServeHTTP` action decoder.** When the request body decoded successfully but produced a nil action (e.g. JSON null payload), the error handler called `err.Error()` on a nil error, causing a panic. Added a nil guard so the error message is set correctly in both cases.
-- **`appErr` rendered as raw pointer in command responses.** Passing a `*model.AppError` directly to a `%s` format verb produced `%!s(*model.AppError=...)` instead of the error message. Fixed across all command response call sites in `command.go` — `executeCommandWelcome`, `executeCommandSetWelcome`, `executeCommandGetWelcome`, and `executeCommandDeleteWelcome` — to use `appErr.Error()`.
-- **Help text referred to "Direct channels" instead of "Private channels".** The `set_channel_welcome` command rejects private channels, not direct channels. The help string now matches the actual restriction.
-- **`plugin.json` setting default encoded as string instead of number.** `ChannelWelcomeAutoJoinDelaySeconds` declared `type: number` but its `default` was `"5"` (a JSON string). Changed to `5` to match the declared type and prevent System Console rendering issues.
-- **`TestFilterLogEntries/filter_out_old_entries` was flaky and failed on CI.** Two root causes: (1) `filterLogEntries` used `Before(since)` which let entries with a timestamp exactly equal to `since` pass through — changed to `!After(since)` to exclude them. (2) The test used repeated `time.Now()` calls inside the map literal for log entry timestamps, but `since` was captured earlier at line 99. On a slow CI machine the "now" entry's timestamp ended up one millisecond after `since`, causing it to slip through the filter and return 3 entries instead of 2. Fixed by anchoring all timestamps in the test to the same `now` variable used for `since`.
-
-### Maintenance
-
-- **Updated `golangci-lint` from `v1.51.1` to `v1.64.8` with Go version fallback.** `v1.64.8` requires Go 1.23+ and cannot be installed via `go install` on CI (Go 1.21.13, `GOTOOLCHAIN=local`). The Makefile now tries `go install` first; if that fails, it downloads the pre-built binary directly from the GitHub release tarball. This works on all Go versions without requiring sudo or a toolchain upgrade.
-- **Removed fully-inactivated linters from `.golangci.yml`.** `deadcode`, `golint`, `interfacer`, `structcheck`, and `varcheck` were removed in golangci-lint v1.49–1.51 and caused exit code 7. Replaced `golint` with `revive`; the others are covered by `unused`.
-- **Replaced deprecated `check-shadowing` govet option.** The `govet.check-shadowing` config key was removed in newer golangci-lint. Replaced with an explicit `disable: [shadow]` entry to preserve the original lint scope without enabling the stricter full shadow analyzer against pre-existing build tooling.
-- **Renamed unused interface parameter `c *plugin.Context` to `_`.** Required by the Mattermost plugin interface but unused in `UserHasJoinedTeam`, `UserHasJoinedChannel`, and `ServeHTTP`. Renamed to satisfy `revive`'s unused-parameter check.
-
-## v1.4.0 — 2026-04-23
+## v1.4.0 — 2026-04-24
 
 ### Changed
 
@@ -34,10 +16,26 @@ The changelog can be found at https://github.com/mattermost/mattermost-plugin-we
 ### Added
 
 - **`ChannelWelcomeAutoJoinDelaySeconds` setting.** Controls how long the plugin waits before sending the channel welcome ephemeral. Configurable from System Console → Plugins → Welcome Bot. Defaults to 5 seconds. Applies to all join types.
-
 - **`/welcomebot welcome` command.** Any user can run this in any channel to re-show that channel's welcome message as an ephemeral visible only to them. The primary recovery path for missed welcomes — see known limitations below.
-
 - **`POST /admin/set_channel_welcome` endpoint.** Allows system admins to set channel welcome messages programmatically. Accepts `{"channel_id": "...", "message": "..."}`. Callers authenticate to the Mattermost server using `Authorization: Bearer <token>` (a personal access token or session token); Mattermost authenticates the request and injects `Mattermost-User-Id`, which the plugin uses to verify system admin role. Intended for setup scripts and administrative automation.
+- **`SiteURL` added to `MessageTemplate`.** Templates can now reference `{{.SiteURL}}` in welcome messages.
+
+### Fixed
+
+- **`{{.SiteURL}}` rendered empty in button-action welcome messages.** The interactive button action flow in `ServeHTTP` never populated `SiteURL` on the message template. Fixed by setting `data.SiteURL = p.getSiteURL()` alongside the other template fields.
+- **Nil panic in `ServeHTTP` action decoder.** When the request body decoded successfully but produced a nil action (e.g. JSON null payload), the error handler called `err.Error()` on a nil error. Added a nil guard.
+- **`appErr` rendered as raw pointer in command responses.** Passing `*model.AppError` directly to a `%s` format verb produced `%!s(*model.AppError=...)`. Fixed across all call sites in `command.go` to use `appErr.Error()`.
+- **Help text referred to "Direct channels" instead of "Private channels".** The `set_channel_welcome` command rejects private channels. The help string now matches the actual restriction.
+- **`plugin.json` setting default encoded as string instead of number.** `ChannelWelcomeAutoJoinDelaySeconds` declared `type: number` but `default` was `"5"`. Changed to `5`.
+- **`TestFilterLogEntries/filter_out_old_entries` was flaky on CI.** Two root causes: `filterLogEntries` used `Before(since)` which let entries at exactly `since` pass through (changed to `!After(since)`), and the test used repeated `time.Now()` calls that drifted from the `since` baseline on slow machines (anchored all timestamps to the same `now` variable).
+
+### Maintenance
+
+- **Updated `golangci-lint` from `v1.51.1` to `v1.64.8` with Go version fallback.** `v1.64.8` requires Go 1.23+ and cannot be installed via `go install` on CI (Go 1.21.13, `GOTOOLCHAIN=local`). The Makefile tries `go install` first; on failure it downloads the pre-built binary from the GitHub release tarball.
+- **Removed fully-inactivated linters from `.golangci.yml`.** `deadcode`, `golint`, `interfacer`, `structcheck`, and `varcheck` caused exit code 7 in newer golangci-lint. Replaced `golint` with `revive`; the others are covered by `unused`.
+- **Replaced deprecated `check-shadowing` govet option** with an explicit `disable: [shadow]` entry.
+- **Fixed `goimports local-prefixes`** — was set to `mattermost-plugin-autolink` (copy-paste error). Updated to `mattermost-plugin-welcomebot`.
+- **Renamed unused interface parameters** `c *plugin.Context` and `actor *model.User` to `_` in hook and HTTP handler signatures to satisfy `revive`.
 
 ### Known Limitations
 
