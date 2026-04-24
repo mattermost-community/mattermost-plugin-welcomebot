@@ -85,6 +85,9 @@ func (p *Plugin) OnConfigurationChange() error {
 		return err
 	}
 
+	if c.WelcomeMessages == nil {
+		c.WelcomeMessages = []*ConfigMessage{}
+	}
 	p.welcomeMessages.Store(c.WelcomeMessages)
 
 	delay := c.ChannelWelcomeAutoJoinDelaySeconds
