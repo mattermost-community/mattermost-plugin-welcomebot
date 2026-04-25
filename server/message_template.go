@@ -12,3 +12,11 @@ type MessageTemplate struct {
 	UserDisplayName string
 	SiteURL         string
 }
+
+// GlobalMessageTemplate represents all the data that can be used in the template for a welcomebot global message
+type GlobalMessageTemplate struct {
+	WelcomeBot      *model.User
+	User            *model.User
+	DirectMessage   *model.Channel
+	UserDisplayName string
+}
