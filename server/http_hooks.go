@@ -13,10 +13,42 @@ import (
 	"github.com/mattermost/mattermost/server/public/plugin"
 )
 
-// broadcastCommandPrefix is the marker that turns a direct message to the bot into a team broadcast.
-// The expected format is: "!broadcast <team> <message...>", where <team> is a team name or ID and
-// the message may span multiple lines.
-const broadcastCommandPrefix = "!broadcast"
+const (
+	// broadcastCommandPrefix is the marker that turns a direct message to the bot into a team
+	// broadcast. The expected format is: "!broadcast <team> <message...>", where <team> is a team
+	// name or ID and the message may span multiple lines.
+	broadcastCommandPrefix = "!broadcast"
+
+	// broadcastConfirmWord is the reply a user must send to confirm a pending broadcast.
+	broadcastConfirmWord = "да"
+
+	// broadcastPendingKeyPrefix namespaces the per-user pending broadcast stored in the KV store.
+	broadcastPendingKeyPrefix = "broadcast_pending_"
+
+	// broadcastPendingExpirySeconds is how long a pending broadcast waits for confirmation before it
+	// expires.
+	broadcastPendingExpirySeconds = 300
+)
+
+// broadcastCancelWords are the replies that cancel a pending broadcast.
+var broadcastCancelWords = []string{"нет", "отмена"}
+
+// isBroadcastCancelWord reports whether message is one of the cancel words (case-insensitive).
+func isBroadcastCancelWord(message string) bool {
+	for _, word := range broadcastCancelWords {
+		if strings.EqualFold(message, word) {
+			return true
+		}
+	}
+	return false
+}
+
+// pendingBroadcast holds a broadcast awaiting the initiator's confirmation.
+type pendingBroadcast struct {
+	TeamID          string `json:"team_id"`
+	TeamDisplayName string `json:"team_display_name"`
+	Message         string `json:"message"`
+}
 
 var (
 	// sendMessageToTeamDelay is the pause between each direct message sent by the broadcast,
@@ -167,7 +199,10 @@ func (p *Plugin) MessageHasBeenPosted(_ *plugin.Context, post *model.Post) {
 	}
 
 	message := strings.TrimSpace(post.Message)
-	if !strings.HasPrefix(message, broadcastCommandPrefix) {
+	isBroadcast := strings.HasPrefix(message, broadcastCommandPrefix)
+	isConfirm := strings.EqualFold(message, broadcastConfirmWord)
+	isCancel := isBroadcastCancelWord(message)
+	if !isBroadcast && !isConfirm && !isCancel {
 		return
 	}
 
@@ -181,41 +216,153 @@ func (p *Plugin) MessageHasBeenPosted(_ *plugin.Context, post *model.Post) {
 		return
 	}
 
+	switch {
+	case isBroadcast:
+		p.handleBroadcastRequest(post.UserId, message)
+	case isConfirm:
+		p.handleBroadcastConfirmation(post.UserId)
+	case isCancel:
+		p.handleBroadcastCancellation(post.UserId)
+	}
+}
+
+// handleBroadcastCancellation discards the user's pending broadcast (if any) and confirms it.
+func (p *Plugin) handleBroadcastCancellation(userID string) {
+	pending, ok := p.takePendingBroadcast(userID)
+	if !ok {
+		// No pending broadcast: the cancel word was an ordinary message, so stay silent.
+		return
+	}
+
+	p.notifyInitiator(userID, fmt.Sprintf(
+		"Рассылка по команде **%s** отменена.", pending.TeamDisplayName))
+}
+
+// handleBroadcastRequest validates a "!broadcast" command and, if the author is authorized, stores
+// it as a pending broadcast and asks the author to confirm before anything is sent.
+func (p *Plugin) handleBroadcastRequest(userID, message string) {
 	teamRef, broadcastMessage := parseBroadcastCommand(message)
 
 	// The broadcast is restricted to system administrators and team administrators. Resolve the
 	// target team up-front so team-admin rights can be checked against it.
-	isSysadmin := p.isSystemAdmin(post.UserId)
+	isSysadmin := p.isSystemAdmin(userID)
 
 	var team *model.Team
 	if teamRef != "" {
 		team = p.resolveTeam(teamRef)
 	}
 
-	authorized := isSysadmin || (team != nil && p.isTeamAdmin(post.UserId, team.Id))
+	authorized := isSysadmin || (team != nil && p.isTeamAdmin(userID, team.Id))
 	if !authorized {
 		// Stay silent for non-admins so the feature is neither discoverable nor usable by them,
 		// and they can't probe team existence through the responses.
-		p.API.LogDebug("ignoring !broadcast from non-admin user", "user_id", post.UserId)
+		p.API.LogDebug("ignoring !broadcast from non-admin user", "user_id", userID)
 		return
 	}
 
 	// From here the author is an admin, so give helpful feedback on malformed input.
 	if teamRef == "" || broadcastMessage == "" {
-		p.notifyInitiator(post.UserId, fmt.Sprintf(
+		p.notifyInitiator(userID, fmt.Sprintf(
 			"Не удалось разобрать команду. Формат: `%s <команда> <сообщение>`.", broadcastCommandPrefix))
 		return
 	}
 
 	if team == nil {
-		p.notifyInitiator(post.UserId, fmt.Sprintf("Команда `%s` не найдена.", teamRef))
+		p.notifyInitiator(userID, fmt.Sprintf("Команда `%s` не найдена.", teamRef))
 		return
 	}
 
-	p.notifyInitiator(post.UserId, fmt.Sprintf(
-		"Рассылка по команде **%s** запущена. По завершении придёт отчёт.", team.DisplayName))
+	memberCount := p.teamMemberCount(team.Id)
 
-	go p.broadcastMessageToTeam(post.UserId, team, broadcastMessage)
+	pending := pendingBroadcast{TeamID: team.Id, TeamDisplayName: team.DisplayName, Message: broadcastMessage}
+	if !p.storePendingBroadcast(userID, pending) {
+		p.notifyInitiator(userID, "Не удалось подготовить рассылку. Попробуйте ещё раз.")
+		return
+	}
+
+	p.notifyInitiator(userID, fmt.Sprintf(
+		"⚠️ Вы собираетесь отправить сообщение **%d** участникам команды **%s**.\n"+
+			"Отправьте \"%s\" для продолжения или \"%s\" для отмены.",
+		memberCount, team.DisplayName, broadcastConfirmWord, broadcastCancelWords[0]))
+}
+
+// handleBroadcastConfirmation runs the pending broadcast (if any) for the user who confirmed it.
+func (p *Plugin) handleBroadcastConfirmation(userID string) {
+	pending, ok := p.takePendingBroadcast(userID)
+	if !ok {
+		// No pending broadcast: the "да" was an ordinary message, so stay silent.
+		return
+	}
+
+	// Re-check authorization in case the user's roles changed between request and confirmation.
+	if !p.userCanSendMessageToTeam(userID, pending.TeamID) {
+		p.API.LogError("user no longer authorized to broadcast to team", "user_id", userID, "team_id", pending.TeamID)
+		p.notifyInitiator(userID, fmt.Sprintf(
+			"У вас больше нет прав на рассылку по команде **%s**.", pending.TeamDisplayName))
+		return
+	}
+
+	team := &model.Team{Id: pending.TeamID, DisplayName: pending.TeamDisplayName}
+	p.notifyInitiator(userID, fmt.Sprintf(
+		"Рассылка по команде **%s** запущена. По завершении придёт отчёт.", pending.TeamDisplayName))
+
+	go p.broadcastMessageToTeam(userID, team, pending.Message)
+}
+
+// teamMemberCount returns the number of active members in the team, or 0 if it cannot be determined.
+func (p *Plugin) teamMemberCount(teamID string) int64 {
+	stats, appErr := p.API.GetTeamStats(teamID)
+	if appErr != nil {
+		p.API.LogError("failed to query team stats", "team_id", teamID, "error", appErr.Error())
+		return 0
+	}
+
+	return stats.ActiveMemberCount
+}
+
+// storePendingBroadcast persists a pending broadcast for the user with an expiry, returning false on
+// failure.
+func (p *Plugin) storePendingBroadcast(userID string, pending pendingBroadcast) bool {
+	data, err := json.Marshal(pending)
+	if err != nil {
+		p.API.LogError("failed to marshal pending broadcast", "user_id", userID, "error", err.Error())
+		return false
+	}
+
+	if appErr := p.API.KVSetWithExpiry(broadcastPendingKeyPrefix+userID, data, broadcastPendingExpirySeconds); appErr != nil {
+		p.API.LogError("failed to store pending broadcast", "user_id", userID, "error", appErr.Error())
+		return false
+	}
+
+	return true
+}
+
+// takePendingBroadcast loads and deletes the user's pending broadcast, returning ok=false if there
+// is none.
+func (p *Plugin) takePendingBroadcast(userID string) (pendingBroadcast, bool) {
+	var pending pendingBroadcast
+
+	key := broadcastPendingKeyPrefix + userID
+	data, appErr := p.API.KVGet(key)
+	if appErr != nil {
+		p.API.LogError("failed to load pending broadcast", "user_id", userID, "error", appErr.Error())
+		return pending, false
+	}
+	if data == nil {
+		return pending, false
+	}
+
+	// Consume the pending broadcast so a confirmation can't be replayed.
+	if appErr := p.API.KVDelete(key); appErr != nil {
+		p.API.LogError("failed to delete pending broadcast", "user_id", userID, "error", appErr.Error())
+	}
+
+	if err := json.Unmarshal(data, &pending); err != nil {
+		p.API.LogError("failed to unmarshal pending broadcast", "user_id", userID, "error", err.Error())
+		return pending, false
+	}
+
+	return pending, true
 }
 
 // parseBroadcastCommand extracts the team reference and message body from a broadcast command. The
