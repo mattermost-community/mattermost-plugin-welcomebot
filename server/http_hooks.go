@@ -458,9 +458,16 @@ func parseBroadcastCommand(command string) (teamRef, message string) {
 func (p *Plugin) broadcastMessageToTeam(initiatorUserID string, team *model.Team, message string) {
 	teamID := team.Id
 	sent := 0
+	skipped := 0
 	failed := 0
 	for page := 0; ; page++ {
-		users, appErr := p.API.GetUsersInTeam(teamID, page, sendMessageToTeamPageSize)
+		// Fetch only active users (Active filters out deactivated accounts); bots are excluded below.
+		users, appErr := p.API.GetUsers(&model.UserGetOptions{
+			InTeamId: teamID,
+			Active:   true,
+			Page:     page,
+			PerPage:  sendMessageToTeamPageSize,
+		})
 		if appErr != nil {
 			p.API.LogError("failed to query users in team", "team_id", teamID, "error", appErr.Error())
 			p.notifyInitiator(initiatorUserID, fmt.Sprintf(
@@ -474,6 +481,12 @@ func (p *Plugin) broadcastMessageToTeam(initiatorUserID string, team *model.Team
 		}
 
 		for _, user := range users {
+			// Never message bots (including the welcomebot itself) or deactivated accounts.
+			if user.IsBot || user.DeleteAt != 0 {
+				skipped++
+				continue
+			}
+
 			dmChannel, appErr := p.API.GetDirectChannel(user.Id, p.botUserID)
 			if appErr != nil {
 				p.API.LogError("failed to get direct channel", "user_id", user.Id, "error", appErr.Error())
@@ -504,10 +517,10 @@ func (p *Plugin) broadcastMessageToTeam(initiatorUserID string, team *model.Team
 		}
 	}
 
-	p.API.LogInfo("finished broadcasting message to team", "team_id", teamID, "sent", sent, "failed", failed)
+	p.API.LogInfo("finished broadcasting message to team", "team_id", teamID, "sent", sent, "skipped", skipped, "failed", failed)
 	p.notifyInitiator(initiatorUserID, fmt.Sprintf(
-		"Рассылка по команде **%s** завершена. Отправлено: %d, ошибок: %d.",
-		team.DisplayName, sent, failed))
+		"Рассылка по команде **%s** завершена. Отправлено: %d, пропущено (боты/неактивные): %d, ошибок: %d.",
+		team.DisplayName, sent, skipped, failed))
 }
 
 // notifyInitiator sends a direct message from the bot to the given user.

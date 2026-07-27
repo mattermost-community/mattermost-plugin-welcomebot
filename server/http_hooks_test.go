@@ -42,6 +42,14 @@ func mockLogging(api *plugintest.API) {
 	}
 }
 
+// usersOpts matches the GetUsers options used by the broadcast: active users of the test team on the
+// given page.
+func usersOpts(page, perPage int) interface{} {
+	return mock.MatchedBy(func(o *model.UserGetOptions) bool {
+		return o != nil && o.InTeamId == testTeamID && o.Active && o.Page == page && o.PerPage == perPage
+	})
+}
+
 func newTestPlugin(api *plugintest.API) *Plugin {
 	p := &Plugin{botUserID: testBotUserID}
 	p.SetAPI(api)
@@ -149,7 +157,7 @@ func TestHandleSendMessageToTeam_TeamAdminBroadcasts(t *testing.T) {
 	api.On("GetTeamMember", testTeamID, "teamadmin1").Return(&model.TeamMember{TeamId: testTeamID, UserId: "teamadmin1", SchemeAdmin: true}, nil)
 
 	users := []*model.User{{Id: "u1"}}
-	api.On("GetUsersInTeam", testTeamID, 0, sendMessageToTeamPageSize).Return(users, nil)
+	api.On("GetUsers", usersOpts(0, sendMessageToTeamPageSize)).Return(users, nil)
 	for _, uid := range []string{"u1", "teamadmin1"} {
 		api.On("GetDirectChannel", uid, testBotUserID).Return(&model.Channel{Id: "dm_" + uid}, nil)
 	}
@@ -186,6 +194,62 @@ func TestHandleSendMessageToTeam_TeamAdminBroadcasts(t *testing.T) {
 	api.AssertExpectations(t)
 }
 
+func TestHandleSendMessageToTeam_SkipsBotsAndInactiveUsers(t *testing.T) {
+	origDelay := sendMessageToTeamDelay
+	sendMessageToTeamDelay = 0
+	defer func() { sendMessageToTeamDelay = origDelay }()
+
+	api := &plugintest.API{}
+	mockLogging(api)
+
+	team := &model.Team{Id: testTeamID, Name: "myteam", DisplayName: "My Team"}
+	api.On("GetTeam", "myteam").Return(team, nil)
+	api.On("GetUser", "admin1").Return(&model.User{Id: "admin1", Roles: "system_admin"}, nil)
+
+	// GetUsers is asked for active users only, but a bot and a deactivated account may still slip
+	// through and must be skipped client-side.
+	users := []*model.User{
+		{Id: "u1"},
+		{Id: "botuser", IsBot: true},
+		{Id: "inactive", DeleteAt: 123},
+		{Id: "u2"},
+	}
+	api.On("GetUsers", usersOpts(0, sendMessageToTeamPageSize)).Return(users, nil)
+
+	// Only real, active recipients (and the initiator) get a direct channel.
+	for _, uid := range []string{"u1", "u2", "admin1"} {
+		api.On("GetDirectChannel", uid, testBotUserID).Return(&model.Channel{Id: "dm_" + uid}, nil)
+	}
+
+	posts := make(chan *model.Post, 8)
+	api.On("CreatePost", mock.AnythingOfType("*model.Post")).Return(
+		func(post *model.Post) *model.Post { posts <- post; return post },
+		func(post *model.Post) *model.AppError { return nil },
+	)
+
+	p := newTestPlugin(api)
+	w := httptest.NewRecorder()
+	p.handleSendMessageToTeam(w, newRequest("admin1", "myteam", "Hello team"))
+	assert.Equal(t, http.StatusAccepted, w.Code)
+
+	// Recipients u1 and u2 + a completion report to the initiator = 3 posts.
+	byChannel := map[string]string{}
+	for i := 0; i < 3; i++ {
+		post := recvPost(t, posts)
+		byChannel[post.ChannelId] = post.Message
+	}
+
+	assert.Equal(t, "Hello team", byChannel["dm_u1"])
+	assert.Equal(t, "Hello team", byChannel["dm_u2"])
+	assert.Contains(t, byChannel["dm_admin1"], "Отправлено: 2")
+	assert.Contains(t, byChannel["dm_admin1"], "пропущено (боты/неактивные): 2")
+
+	// The bot and the deactivated user must never be messaged.
+	api.AssertNotCalled(t, "GetDirectChannel", "botuser", testBotUserID)
+	api.AssertNotCalled(t, "GetDirectChannel", "inactive", testBotUserID)
+	api.AssertExpectations(t)
+}
+
 func TestHandleSendMessageToTeam_Pagination(t *testing.T) {
 	// Shrink the page size and drop the delay so the test exercises multiple pages quickly.
 	origPageSize, origDelay := sendMessageToTeamPageSize, sendMessageToTeamDelay
@@ -202,8 +266,8 @@ func TestHandleSendMessageToTeam_Pagination(t *testing.T) {
 	api.On("GetUser", "admin1").Return(&model.User{Id: "admin1", Roles: "system_admin"}, nil)
 
 	// Page 0: full page (== page size) forces another lookup. Page 1: partial page ends the loop.
-	api.On("GetUsersInTeam", testTeamID, 0, 2).Return([]*model.User{{Id: "u1"}, {Id: "u2"}}, nil)
-	api.On("GetUsersInTeam", testTeamID, 1, 2).Return([]*model.User{{Id: "u3"}}, nil)
+	api.On("GetUsers", usersOpts(0, 2)).Return([]*model.User{{Id: "u1"}, {Id: "u2"}}, nil)
+	api.On("GetUsers", usersOpts(1, 2)).Return([]*model.User{{Id: "u3"}}, nil)
 
 	for _, uid := range []string{"u1", "u2", "u3", "admin1"} {
 		api.On("GetDirectChannel", uid, testBotUserID).Return(&model.Channel{Id: "dm_" + uid}, nil)
@@ -242,8 +306,8 @@ func TestHandleSendMessageToTeam_Pagination(t *testing.T) {
 	assert.Contains(t, channels["dm_admin1"], "My Team")
 
 	// Both pages must have been requested.
-	api.AssertCalled(t, "GetUsersInTeam", testTeamID, 0, 2)
-	api.AssertCalled(t, "GetUsersInTeam", testTeamID, 1, 2)
+	api.AssertCalled(t, "GetUsers", usersOpts(0, 2))
+	api.AssertCalled(t, "GetUsers", usersOpts(1, 2))
 	api.AssertExpectations(t)
 }
 
@@ -361,7 +425,7 @@ func TestMessageHasBeenPosted_RequestAsksForConfirmation(t *testing.T) {
 	assert.Contains(t, prompt.Message, broadcastConfirmWord)
 
 	// Nothing must be broadcast before confirmation.
-	api.AssertNotCalled(t, "GetUsersInTeam", mock.Anything, mock.Anything, mock.Anything)
+	api.AssertNotCalled(t, "GetUsers", mock.Anything)
 	api.AssertExpectations(t)
 }
 
@@ -389,7 +453,7 @@ func TestMessageHasBeenPosted_ConfirmationRunsBroadcast(t *testing.T) {
 	)
 	api.On("KVDelete", key).Return(nil)
 
-	api.On("GetUsersInTeam", testTeamID, 0, sendMessageToTeamPageSize).Return([]*model.User{{Id: "u1"}}, nil)
+	api.On("GetUsers", usersOpts(0, sendMessageToTeamPageSize)).Return([]*model.User{{Id: "u1"}}, nil)
 	api.On("GetDirectChannel", "u1", testBotUserID).Return(&model.Channel{Id: "dm_u1"}, nil)
 
 	posts := make(chan *model.Post, 4)
@@ -451,7 +515,7 @@ func TestMessageHasBeenPosted_CancellationDiscardsPending(t *testing.T) {
 
 			// The pending broadcast must have been consumed and nothing sent.
 			api.AssertCalled(t, "KVDelete", key)
-			api.AssertNotCalled(t, "GetUsersInTeam", mock.Anything, mock.Anything, mock.Anything)
+			api.AssertNotCalled(t, "GetUsers", mock.Anything)
 		})
 	}
 }
@@ -484,7 +548,7 @@ func TestMessageHasBeenPosted_ConfirmationWithoutPendingIgnored(t *testing.T) {
 
 	// No pending broadcast: a stray "да" must not produce any reply or broadcast.
 	api.AssertNotCalled(t, "CreatePost", mock.Anything)
-	api.AssertNotCalled(t, "GetUsersInTeam", mock.Anything, mock.Anything, mock.Anything)
+	api.AssertNotCalled(t, "GetUsers", mock.Anything)
 }
 
 func TestExpirePendingBroadcast_NotifiesOnTimeout(t *testing.T) {
@@ -558,7 +622,7 @@ func TestHandleSendMessageToTeam_SystemAdminBroadcasts(t *testing.T) {
 
 	// Background broadcast: one page with two users, fewer than the page size, so the loop stops.
 	users := []*model.User{{Id: "u1"}, {Id: "u2"}}
-	api.On("GetUsersInTeam", testTeamID, 0, sendMessageToTeamPageSize).Return(users, nil)
+	api.On("GetUsers", usersOpts(0, sendMessageToTeamPageSize)).Return(users, nil)
 
 	// Each recipient plus the initiator gets a direct channel and a post.
 	for _, uid := range []string{"u1", "u2", "admin1"} {
