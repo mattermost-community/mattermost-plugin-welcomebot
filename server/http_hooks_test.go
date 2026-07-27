@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -18,6 +19,14 @@ const (
 	testBotUserID = "botuserid00000000000000000"
 	testTeamID    = "teamid0000000000000000000"
 )
+
+// TestMain disables the pending-broadcast expiry timer by default so tests that create a pending
+// broadcast don't fire a stray timer (which would hit unmocked API calls in the background). The
+// expiry test re-enables it with a short duration.
+func TestMain(m *testing.M) {
+	broadcastPendingExpiry = time.Hour
+	os.Exit(m.Run())
+}
 
 // mockLogging registers permissive expectations for the logging methods so tests don't have to
 // enumerate every log call.
@@ -334,7 +343,7 @@ func TestMessageHasBeenPosted_RequestAsksForConfirmation(t *testing.T) {
 	api.On("GetTeam", "myteam").Return(team, nil)
 	api.On("GetUser", "admin1").Return(&model.User{Id: "admin1", Roles: "system_admin"}, nil)
 	api.On("GetTeamStats", testTeamID).Return(&model.TeamStats{TeamId: testTeamID, ActiveMemberCount: 6220}, nil)
-	api.On("KVSetWithExpiry", broadcastPendingKeyPrefix+"admin1", mock.AnythingOfType("[]uint8"), int64(broadcastPendingExpirySeconds)).Return(nil)
+	api.On("KVSetWithExpiry", broadcastPendingKeyPrefix+"admin1", mock.AnythingOfType("[]uint8"), int64(broadcastPendingKVTTLSeconds)).Return(nil)
 
 	posts := make(chan *model.Post, 1)
 	api.On("CreatePost", mock.AnythingOfType("*model.Post")).Return(
@@ -372,7 +381,7 @@ func TestMessageHasBeenPosted_ConfirmationRunsBroadcast(t *testing.T) {
 	// KV round-trip: capture what the request stores and hand it back on confirmation.
 	var stored []byte
 	key := broadcastPendingKeyPrefix + "admin1"
-	api.On("KVSetWithExpiry", key, mock.AnythingOfType("[]uint8"), int64(broadcastPendingExpirySeconds)).Return(
+	api.On("KVSetWithExpiry", key, mock.AnythingOfType("[]uint8"), int64(broadcastPendingKVTTLSeconds)).Return(
 		func(_ string, value []byte, _ int64) *model.AppError { stored = value; return nil })
 	api.On("KVGet", key).Return(
 		func(string) []byte { return stored },
@@ -476,6 +485,67 @@ func TestMessageHasBeenPosted_ConfirmationWithoutPendingIgnored(t *testing.T) {
 	// No pending broadcast: a stray "да" must not produce any reply or broadcast.
 	api.AssertNotCalled(t, "CreatePost", mock.Anything)
 	api.AssertNotCalled(t, "GetUsersInTeam", mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestExpirePendingBroadcast_NotifiesOnTimeout(t *testing.T) {
+	api := &plugintest.API{}
+	mockLogging(api)
+
+	pending := pendingBroadcast{TeamID: testTeamID, TeamDisplayName: "My Team", Message: "Hello team", Token: "tok1"}
+	data, _ := json.Marshal(pending)
+
+	key := broadcastPendingKeyPrefix + "admin1"
+	api.On("KVGet", key).Return(data, nil)
+	api.On("KVDelete", key).Return(nil)
+	api.On("GetDirectChannel", "admin1", testBotUserID).Return(&model.Channel{Id: "dm_admin1"}, nil)
+
+	replies := make(chan *model.Post, 1)
+	api.On("CreatePost", mock.AnythingOfType("*model.Post")).Return(
+		func(post *model.Post) *model.Post { replies <- post; return post },
+		func(post *model.Post) *model.AppError { return nil },
+	)
+	defer api.AssertExpectations(t)
+
+	p := newTestPlugin(api)
+	p.expirePendingBroadcast("admin1", "tok1")
+
+	reply := recvPost(t, replies)
+	assert.Equal(t, "dm_admin1", reply.ChannelId)
+	assert.Contains(t, reply.Message, "истекло")
+	assert.Contains(t, reply.Message, "My Team")
+	api.AssertCalled(t, "KVDelete", key)
+}
+
+func TestExpirePendingBroadcast_IgnoresStaleToken(t *testing.T) {
+	api := &plugintest.API{}
+	mockLogging(api)
+
+	// The pending broadcast has a newer token, so a stale timer must not touch it.
+	pending := pendingBroadcast{TeamID: testTeamID, TeamDisplayName: "My Team", Token: "new-token"}
+	data, _ := json.Marshal(pending)
+	api.On("KVGet", broadcastPendingKeyPrefix+"admin1").Return(data, nil)
+	defer api.AssertExpectations(t)
+
+	p := newTestPlugin(api)
+	p.expirePendingBroadcast("admin1", "old-token")
+
+	api.AssertNotCalled(t, "KVDelete", mock.Anything)
+	api.AssertNotCalled(t, "CreatePost", mock.Anything)
+}
+
+func TestExpirePendingBroadcast_NoPendingIgnored(t *testing.T) {
+	api := &plugintest.API{}
+	mockLogging(api)
+
+	// Already confirmed or cancelled: nothing to expire.
+	api.On("KVGet", broadcastPendingKeyPrefix+"admin1").Return(nil, nil)
+	defer api.AssertExpectations(t)
+
+	p := newTestPlugin(api)
+	p.expirePendingBroadcast("admin1", "tok1")
+
+	api.AssertNotCalled(t, "KVDelete", mock.Anything)
+	api.AssertNotCalled(t, "CreatePost", mock.Anything)
 }
 
 func TestHandleSendMessageToTeam_SystemAdminBroadcasts(t *testing.T) {

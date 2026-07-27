@@ -26,9 +26,18 @@ const (
 	broadcastPendingKeyPrefix = "broadcast_pending_"
 
 	// broadcastPendingExpirySeconds is how long a pending broadcast waits for confirmation before it
-	// expires.
+	// expires and the initiator is notified.
 	broadcastPendingExpirySeconds = 300
+
+	// broadcastPendingKVTTLSeconds is the KV entry's time-to-live. It outlives the in-memory expiry
+	// timer so the pending broadcast is still readable when the timer fires (and acts as a fallback
+	// if the timer is lost, e.g. on a plugin restart).
+	broadcastPendingKVTTLSeconds = broadcastPendingExpirySeconds + 30
 )
+
+// broadcastPendingExpiry is the delay after which a pending broadcast expires. It is a var (not a
+// const) so tests can shorten it.
+var broadcastPendingExpiry = broadcastPendingExpirySeconds * time.Second
 
 // broadcastCancelWords are the replies that cancel a pending broadcast.
 var broadcastCancelWords = []string{"нет", "отмена"}
@@ -48,6 +57,9 @@ type pendingBroadcast struct {
 	TeamID          string `json:"team_id"`
 	TeamDisplayName string `json:"team_display_name"`
 	Message         string `json:"message"`
+	// Token identifies this particular pending broadcast so a stale expiry timer never discards a
+	// newer one the same user has since started.
+	Token string `json:"token"`
 }
 
 var (
@@ -274,16 +286,45 @@ func (p *Plugin) handleBroadcastRequest(userID, message string) {
 
 	memberCount := p.teamMemberCount(team.Id)
 
-	pending := pendingBroadcast{TeamID: team.Id, TeamDisplayName: team.DisplayName, Message: broadcastMessage}
+	pending := pendingBroadcast{
+		TeamID:          team.Id,
+		TeamDisplayName: team.DisplayName,
+		Message:         broadcastMessage,
+		Token:           model.NewId(),
+	}
 	if !p.storePendingBroadcast(userID, pending) {
 		p.notifyInitiator(userID, "Не удалось подготовить рассылку. Попробуйте ещё раз.")
 		return
 	}
 
+	p.scheduleBroadcastExpiry(userID, pending.Token)
+
 	p.notifyInitiator(userID, fmt.Sprintf(
 		"⚠️ Вы собираетесь отправить сообщение **%d** участникам команды **%s**.\n"+
 			"Отправьте \"%s\" для продолжения или \"%s\" для отмены.",
 		memberCount, team.DisplayName, broadcastConfirmWord, broadcastCancelWords[0]))
+}
+
+// scheduleBroadcastExpiry notifies the initiator (and drops the pending broadcast) if it is not
+// confirmed or cancelled within broadcastPendingExpiry.
+func (p *Plugin) scheduleBroadcastExpiry(userID, token string) {
+	time.AfterFunc(broadcastPendingExpiry, func() {
+		p.expirePendingBroadcast(userID, token)
+	})
+}
+
+// expirePendingBroadcast discards a still-pending broadcast whose confirmation timed out and tells
+// the initiator. It does nothing if the broadcast was already handled or replaced by a newer one.
+func (p *Plugin) expirePendingBroadcast(userID, token string) {
+	pending, ok := p.peekPendingBroadcast(userID)
+	if !ok || pending.Token != token {
+		return
+	}
+
+	p.deletePendingBroadcast(userID)
+	p.notifyInitiator(userID, fmt.Sprintf(
+		"Время ожидания подтверждения истекло. Рассылка по команде **%s** отменена.",
+		pending.TeamDisplayName))
 }
 
 // handleBroadcastConfirmation runs the pending broadcast (if any) for the user who confirmed it.
@@ -329,12 +370,41 @@ func (p *Plugin) storePendingBroadcast(userID string, pending pendingBroadcast) 
 		return false
 	}
 
-	if appErr := p.API.KVSetWithExpiry(broadcastPendingKeyPrefix+userID, data, broadcastPendingExpirySeconds); appErr != nil {
+	if appErr := p.API.KVSetWithExpiry(broadcastPendingKeyPrefix+userID, data, broadcastPendingKVTTLSeconds); appErr != nil {
 		p.API.LogError("failed to store pending broadcast", "user_id", userID, "error", appErr.Error())
 		return false
 	}
 
 	return true
+}
+
+// peekPendingBroadcast loads the user's pending broadcast without removing it, returning ok=false if
+// there is none.
+func (p *Plugin) peekPendingBroadcast(userID string) (pendingBroadcast, bool) {
+	var pending pendingBroadcast
+
+	data, appErr := p.API.KVGet(broadcastPendingKeyPrefix + userID)
+	if appErr != nil {
+		p.API.LogError("failed to load pending broadcast", "user_id", userID, "error", appErr.Error())
+		return pending, false
+	}
+	if data == nil {
+		return pending, false
+	}
+
+	if err := json.Unmarshal(data, &pending); err != nil {
+		p.API.LogError("failed to unmarshal pending broadcast", "user_id", userID, "error", err.Error())
+		return pending, false
+	}
+
+	return pending, true
+}
+
+// deletePendingBroadcast removes the user's pending broadcast.
+func (p *Plugin) deletePendingBroadcast(userID string) {
+	if appErr := p.API.KVDelete(broadcastPendingKeyPrefix + userID); appErr != nil {
+		p.API.LogError("failed to delete pending broadcast", "user_id", userID, "error", appErr.Error())
+	}
 }
 
 // takePendingBroadcast loads and deletes the user's pending broadcast, returning ok=false if there
