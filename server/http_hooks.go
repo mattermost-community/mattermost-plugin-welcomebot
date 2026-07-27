@@ -5,11 +5,18 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
+	"unicode"
 
 	"github.com/mattermost/mattermost/server/public/model"
 	"github.com/mattermost/mattermost/server/public/plugin"
 )
+
+// broadcastCommandPrefix is the marker that turns a direct message to the bot into a team broadcast.
+// The expected format is: "!broadcast <team> <message...>", where <team> is a team name or ID and
+// the message may span multiple lines.
+const broadcastCommandPrefix = "!broadcast"
 
 var (
 	// sendMessageToTeamDelay is the pause between each direct message sent by the broadcast,
@@ -112,13 +119,10 @@ func (p *Plugin) handleSendMessageToTeam(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Resolve the team either by ID or by name.
-	team, appErr := p.API.GetTeam(teamRef)
-	if appErr != nil {
-		if team, appErr = p.API.GetTeamByName(teamRef); appErr != nil {
-			p.API.LogError("failed to query team", "team", teamRef, "error", appErr.Error())
-			http.Error(w, "could not find the supplied team", http.StatusNotFound)
-			return
-		}
+	team := p.resolveTeam(teamRef)
+	if team == nil {
+		http.Error(w, "could not find the supplied team", http.StatusNotFound)
+		return
 	}
 
 	// Only a system administrator or an administrator of this team may broadcast a message.
@@ -151,6 +155,84 @@ func (p *Plugin) handleSendMessageToTeam(w http.ResponseWriter, r *http.Request)
 	if err := json.NewEncoder(w).Encode(map[string]string{"status": "accepted"}); err != nil {
 		p.API.LogWarn("failed to write sendmessagetoteam response", "error", err.Error())
 	}
+}
+
+// MessageHasBeenPosted lets an admin trigger a broadcast by writing a direct message to the bot in
+// the form "!broadcast <team> <message...>". The message is sent to every user of the given team,
+// provided the author is a system administrator or an administrator of that team.
+func (p *Plugin) MessageHasBeenPosted(_ *plugin.Context, post *model.Post) {
+	// Ignore the bot's own posts to avoid loops (the broadcast itself posts to DM channels).
+	if post.UserId == p.botUserID {
+		return
+	}
+
+	message := strings.TrimSpace(post.Message)
+	if !strings.HasPrefix(message, broadcastCommandPrefix) {
+		return
+	}
+
+	// Only react to direct messages between the author and the bot.
+	dmChannel, appErr := p.API.GetDirectChannel(post.UserId, p.botUserID)
+	if appErr != nil {
+		p.API.LogError("failed to get direct channel", "user_id", post.UserId, "error", appErr.Error())
+		return
+	}
+	if dmChannel.Id != post.ChannelId {
+		return
+	}
+
+	teamRef, broadcastMessage := parseBroadcastCommand(message)
+
+	// The broadcast is restricted to system administrators and team administrators. Resolve the
+	// target team up-front so team-admin rights can be checked against it.
+	isSysadmin := p.isSystemAdmin(post.UserId)
+
+	var team *model.Team
+	if teamRef != "" {
+		team = p.resolveTeam(teamRef)
+	}
+
+	authorized := isSysadmin || (team != nil && p.isTeamAdmin(post.UserId, team.Id))
+	if !authorized {
+		// Stay silent for non-admins so the feature is neither discoverable nor usable by them,
+		// and they can't probe team existence through the responses.
+		p.API.LogDebug("ignoring !broadcast from non-admin user", "user_id", post.UserId)
+		return
+	}
+
+	// From here the author is an admin, so give helpful feedback on malformed input.
+	if teamRef == "" || broadcastMessage == "" {
+		p.notifyInitiator(post.UserId, fmt.Sprintf(
+			"Не удалось разобрать команду. Формат: `%s <команда> <сообщение>`.", broadcastCommandPrefix))
+		return
+	}
+
+	if team == nil {
+		p.notifyInitiator(post.UserId, fmt.Sprintf("Команда `%s` не найдена.", teamRef))
+		return
+	}
+
+	p.notifyInitiator(post.UserId, fmt.Sprintf(
+		"Рассылка по команде **%s** запущена. По завершении придёт отчёт.", team.DisplayName))
+
+	go p.broadcastMessageToTeam(post.UserId, team, broadcastMessage)
+}
+
+// parseBroadcastCommand extracts the team reference and message body from a broadcast command. The
+// first whitespace-delimited token after the prefix is the team; everything after it (including
+// newlines) is the message.
+func parseBroadcastCommand(command string) (teamRef, message string) {
+	rest := strings.TrimLeftFunc(strings.TrimPrefix(command, broadcastCommandPrefix), unicode.IsSpace)
+
+	idx := strings.IndexFunc(rest, unicode.IsSpace)
+	if idx == -1 {
+		// Only a team was provided, no message.
+		return rest, ""
+	}
+
+	teamRef = rest[:idx]
+	message = strings.TrimSpace(rest[idx:])
+	return teamRef, message
 }
 
 // broadcastMessageToTeam sends message as a direct message from the bot to every user of the team.
@@ -230,25 +312,47 @@ func (p *Plugin) notifyInitiator(userID, message string) {
 	}
 }
 
-// userCanSendMessageToTeam reports whether the user is allowed to broadcast a message to the team:
-// either a system administrator, or an administrator of the given team.
-func (p *Plugin) userCanSendMessageToTeam(userID, teamID string) bool {
+// resolveTeam resolves a team referenced either by its ID or by its name, returning nil if neither
+// lookup succeeds.
+func (p *Plugin) resolveTeam(teamRef string) *model.Team {
+	if team, appErr := p.API.GetTeam(teamRef); appErr == nil {
+		return team
+	}
+
+	team, appErr := p.API.GetTeamByName(teamRef)
+	if appErr != nil {
+		p.API.LogError("failed to query team", "team", teamRef, "error", appErr.Error())
+		return nil
+	}
+
+	return team
+}
+
+// isSystemAdmin reports whether the user has the system administrator role.
+func (p *Plugin) isSystemAdmin(userID string) bool {
 	user, appErr := p.API.GetUser(userID)
 	if appErr != nil {
 		p.API.LogError("failed to query user", "user_id", userID, "error", appErr.Error())
 		return false
 	}
 
-	if user.IsSystemAdmin() {
-		return true
-	}
+	return user.IsSystemAdmin()
+}
 
+// isTeamAdmin reports whether the user is an active administrator of the given team.
+func (p *Plugin) isTeamAdmin(userID, teamID string) bool {
 	teamMember, appErr := p.API.GetTeamMember(teamID, userID)
 	if appErr != nil || teamMember == nil || teamMember.DeleteAt > 0 {
 		return false
 	}
 
 	return teamMember.SchemeAdmin
+}
+
+// userCanSendMessageToTeam reports whether the user is allowed to broadcast a message to the team:
+// either a system administrator, or an administrator of the given team.
+func (p *Plugin) userCanSendMessageToTeam(userID, teamID string) bool {
+	return p.isSystemAdmin(userID) || p.isTeamAdmin(userID, teamID)
 }
 
 func (p *Plugin) encodeEphemeralMessage(w http.ResponseWriter, message string) {
