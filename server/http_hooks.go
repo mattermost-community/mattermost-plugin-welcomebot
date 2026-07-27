@@ -461,13 +461,10 @@ func (p *Plugin) broadcastMessageToTeam(initiatorUserID string, team *model.Team
 	skipped := 0
 	failed := 0
 	for page := 0; ; page++ {
-		// Fetch only active users (Active filters out deactivated accounts); bots are excluded below.
-		users, appErr := p.API.GetUsers(&model.UserGetOptions{
-			InTeamId: teamID,
-			Active:   true,
-			Page:     page,
-			PerPage:  sendMessageToTeamPageSize,
-		})
+		// GetUsersInTeam scopes to the team (unlike GetUsers, whose InTeamId option is ignored and
+		// which would return every user on the server). Bots and deactivated accounts are excluded
+		// client-side below.
+		users, appErr := p.API.GetUsersInTeam(teamID, page, sendMessageToTeamPageSize)
 		if appErr != nil {
 			p.API.LogError("failed to query users in team", "team_id", teamID, "error", appErr.Error())
 			p.notifyInitiator(initiatorUserID, fmt.Sprintf(
