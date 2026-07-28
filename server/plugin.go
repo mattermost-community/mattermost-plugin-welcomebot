@@ -12,7 +12,7 @@ import (
 const (
 	botUsername    = "welcomebot"
 	botDisplayName = "Welcomebot"
-	botDescription = "A bot account created by the Welcomebot plugin."
+	botDescription = ""
 
 	welcomebotChannelWelcomeKey = "chanmsg_"
 	welcomebotTeamWelcomeKey    = "teammsg_"
