@@ -264,7 +264,7 @@ func (p *Plugin) handleBroadcastRequest(userID, message string) {
 		team = p.resolveTeam(teamRef)
 	}
 
-	authorized := isSysadmin || (team != nil && p.isTeamAdmin(userID, team.Id))
+	authorized := isSysadmin // || (team != nil && p.isTeamAdmin(userID, team.Id))
 	if !authorized {
 		// Stay silent for non-admins so the feature is neither discoverable nor usable by them,
 		// and they can't probe team existence through the responses.
