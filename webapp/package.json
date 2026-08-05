@@ -1,0 +1,111 @@
+{
+  "private": true,
+  "scripts": {
+    "build": "webpack --mode=production",
+    "build:watch": "webpack --mode=production --watch",
+    "debug": "webpack --mode=none",
+    "debug:watch": "webpack --mode=development --watch",
+    "lint": "eslint --ignore-pattern node_modules --ignore-pattern dist --ext=.js,.jsx,tsx,ts . --quiet --cache",
+    "fix": "eslint --ignore-pattern node_modules --ignore-pattern dist --ext=.js,.jsx,tsx,ts . --quiet --fix --cache",
+    "test": "jest --forceExit --detectOpenHandles --verbose",
+    "test:watch": "jest --watch",
+    "test-ci": "jest --forceExit --detectOpenHandles --maxWorkers=2",
+    "check-types": "tsc"
+  },
+  "devDependencies": {
+    "@babel/cli": "7.25.6",
+    "@babel/core": "7.25.2",
+    "@babel/preset-env": "7.25.4",
+    "@babel/preset-react": "7.24.7",
+    "@babel/preset-typescript": "7.24.7",
+    "@babel/runtime": "7.25.6",
+    "@emotion/babel-preset-css-prop": "11.2.0",
+    "@emotion/react": "11.9.0",
+    "@mattermost/client": "11.1.0",
+    "@mattermost/eslint-plugin": "1.1.0-0",
+    "@mattermost/types": "11.1.0",
+    "@testing-library/jest-dom": "5.16.1",
+    "@testing-library/react": "14.2.1",
+    "@testing-library/user-event": "14.5.2",
+    "@types/babel__core": "7.20.5",
+    "@types/babel__template": "7.4.4",
+    "@types/jest": "27.4.0",
+    "@types/node": "20.17.6",
+    "@types/react": "18.2.64",
+    "@types/react-dom": "18.2.19",
+    "@types/react-redux": "7.1.22",
+    "@types/react-router-dom": "5.1.5",
+    "@types/react-transition-group": "4.4.0",
+    "@typescript-eslint/eslint-plugin": "7.18.0",
+    "@typescript-eslint/parser": "7.0.2",
+    "babel-loader": "9.1.2",
+    "babel-plugin-formatjs": "10.3.7",
+    "babel-plugin-typescript-to-proptypes": "2.0.0",
+    "css-loader": "6.5.1",
+    "eslint-plugin-import": "2.31.0",
+    "eslint-plugin-react": "7.34.1",
+    "eslint-plugin-react-hooks": "4.6.0",
+    "file-loader": "6.2.0",
+    "identity-obj-proxy": "3.0.0",
+    "isomorphic-fetch": "3.0.0",
+    "jest": "27.4.7",
+    "jest-canvas-mock": "2.3.1",
+    "jest-junit": "13.0.0",
+    "sass": "1.52.3",
+    "sass-loader": "13.0.0",
+    "style-loader": "3.3.1",
+    "webpack": "5.95.0",
+    "webpack-cli": "5.1.4"
+  },
+  "dependencies": {
+    "core-js": "3.26.0",
+    "mattermost-redux": "11.1.0",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "react-redux": "9.2.0",
+    "redux": "5.0.1",
+    "typescript": "4.9.5"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "/non_npm_dependencies/"
+    ],
+    "clearMocks": true,
+    "collectCoverageFrom": [
+      "src/**/*.{js,jsx}"
+    ],
+    "coverageReporters": [
+      "lcov",
+      "text-summary"
+    ],
+    "moduleNameMapper": {
+      "^.+\\.(jpg|jpeg|png|gif|eot|otf|webp|svg|ttf|woff|woff2|mp4|webm|wav|mp3|m4a|aac|oga)$": "identity-obj-proxy",
+      "^.+\\.(css|less|scss)$": "identity-obj-proxy",
+      "^.*i18n.*\\.(json)$": "<rootDir>/tests/i18n_mock.json",
+      "^bundle-loader\\?lazy\\!(.*)$": "$1",
+      "^mattermost-redux/(.*)$": "<rootDir>/node_modules/mattermost-redux/lib/$1",
+      "^@mattermost/types/(.*)$": "<rootDir>/node_modules/@mattermost/types/lib/$1"
+    },
+    "moduleDirectories": [
+      "src",
+      "node_modules",
+      "non_npm_dependencies"
+    ],
+    "reporters": [
+      "default",
+      "jest-junit"
+    ],
+    "transformIgnorePatterns": [
+      "node_modules/(?!react-native|react-router|mattermost-webapp|mattermost-redux|@mattermost|serialize-error)"
+    ],
+    "setupFiles": [
+      "jest-canvas-mock"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/tests/setup.tsx"
+    ],
+    "testURL": "http://localhost:8065"
+  }
+}
