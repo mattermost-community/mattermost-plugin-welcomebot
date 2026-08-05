@@ -88,7 +88,20 @@ func (p *Plugin) OnConfigurationChange() error {
 	if c.WelcomeMessages == nil {
 		c.WelcomeMessages = []*ConfigMessage{}
 	}
+
+	if err := c.Validate(); err != nil {
+		// Reject the new config without Store()-ing it, so the atomic.Value
+		// keeps serving the last-known-good WelcomeMessages rather than
+		// regressing to something invalid (e.g. a hand-edited config.json,
+		// or a client bug that slipped past the webapp's own validation).
+		p.API.LogError("rejected invalid WelcomeMessages configuration; continuing to serve last-known-good config", "error", err.Error())
+		return err
+	}
+
 	p.welcomeMessages.Store(c.WelcomeMessages)
+	// OnConfigurationChange receives no caller identity, so this can only
+	// log that a change occurred and its shape, not which admin made it.
+	p.API.LogInfo("WelcomeMessages configuration updated", "message_count", len(c.WelcomeMessages))
 
 	delay := c.ChannelWelcomeAutoJoinDelaySeconds
 	if delay <= 0 {
