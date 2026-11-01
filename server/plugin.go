@@ -14,6 +14,8 @@ const (
 	botDisplayName = "Welcomebot"
 	botDescription = "A bot account created by the Welcomebot plugin."
 
+	templateNameResponse = "Response"
+
 	welcomebotChannelWelcomeKey = "chanmsg_"
 )
 

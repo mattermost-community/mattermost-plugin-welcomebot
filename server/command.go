@@ -10,7 +10,8 @@ import (
 
 const commandHelp = `* |/welcomebot welcome| - show the welcome message for the current channel (visible only to you). Useful if you were auto-joined and missed it.
 * |/welcomebot preview [team-name] | - preview the welcome message for the given team name. The current user's username will be used to render the template.
-* |/welcomebot list| - list the teams for which welcome messages were defined.
+* |/welcomebot preview_global| - preview the global welcome message sent to new users. The current user's username will be used to render the template.
+* |/welcomebot list| - list the teams for which welcome messages were defined, and whether a global welcome message is defined.
 The following commands will only be allowed to be run by system admins and users with permission to manage channel roles. |set_channel_welcome|, |get_channel_welcome| and |delete_channel_welcome|.
 * |/welcomebot set_channel_welcome [welcome-message]| - set the welcome message for the given channel. Only open channels are supported.
 * |/welcomebot get_channel_welcome| - print the welcome message set for the given channel (if any)
@@ -20,6 +21,7 @@ The following commands will only be allowed to be run by system admins and users
 const (
 	commandTriggerWelcome              = "welcome"
 	commandTriggerPreview              = "preview"
+	commandTriggerPreviewGlobal        = "preview_global"
 	commandTriggerList                 = "list"
 	commandTriggerSetChannelWelcome    = "set_channel_welcome"
 	commandTriggerGetChannelWelcome    = "get_channel_welcome"
@@ -33,7 +35,7 @@ func getCommand() *model.Command {
 		DisplayName:      "welcomebot",
 		Description:      "Welcome Bot helps add new team members to channels.",
 		AutoComplete:     true,
-		AutoCompleteDesc: "Available commands: welcome, preview, help, list, set_channel_welcome, get_channel_welcome, delete_channel_welcome",
+		AutoCompleteDesc: "Available commands: welcome, preview, preview_global, help, list, set_channel_welcome, get_channel_welcome, delete_channel_welcome",
 		AutoCompleteHint: "[command]",
 		AutocompleteData: getAutocompleteData(),
 	}
@@ -64,6 +66,10 @@ func (p *Plugin) validateCommand(action string, parameters []string) string {
 	case commandTriggerPreview:
 		if len(parameters) != 1 {
 			return "Please specify a team, for which preview should be made."
+		}
+	case commandTriggerPreviewGlobal:
+		if len(parameters) > 0 {
+			return "`preview_global` command does not accept any extra parameters"
 		}
 	case commandTriggerList:
 		if len(parameters) > 0 {
@@ -129,7 +135,7 @@ func (p *Plugin) executeCommandWelcome(args *model.CommandArgs) {
 func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs) {
 	found := false
 	for _, message := range p.getWelcomeMessages() {
-		if message.TeamName == teamName {
+		if message.TeamName == teamName && !message.isGlobal() {
 			if err := p.previewWelcomeMessage(teamName, args, *message); err != nil {
 				p.postCommandResponse(args, "error occurred while processing greeting for team `%s`: `%s`", teamName, err)
 				return
@@ -144,24 +150,54 @@ func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs)
 	}
 }
 
-func (p *Plugin) executeCommandList(args *model.CommandArgs) {
-	welcomeMessages := p.getWelcomeMessages()
+func (p *Plugin) executeCommandPreviewGlobal(args *model.CommandArgs) {
+	found := false
+	for _, message := range p.getWelcomeMessages() {
+		if !message.isGlobal() {
+			continue
+		}
 
-	if len(welcomeMessages) == 0 {
+		if err := p.previewGlobalWelcomeMessage(args, *message); err != nil {
+			p.postCommandResponse(args, "error occurred while processing the global welcome message: `%s`", err)
+			return
+		}
+		found = true
+	}
+
+	if !found {
+		p.postCommandResponse(args, "No global welcome message has been defined.")
+	}
+}
+
+func (p *Plugin) executeCommandList(args *model.CommandArgs) {
+	teams := make(map[string]struct{})
+	globalCount := 0
+	for _, message := range p.getWelcomeMessages() {
+		if message.isGlobal() {
+			globalCount++
+			continue
+		}
+		teams[message.TeamName] = struct{}{}
+	}
+
+	if len(teams) == 0 && globalCount == 0 {
 		p.postCommandResponse(args, "There are no welcome messages defined")
 		return
 	}
 
-	// Deduplicate entries
-	teams := make(map[string]struct{})
-	for _, message := range welcomeMessages {
-		teams[message.TeamName] = struct{}{}
+	var str strings.Builder
+	if len(teams) > 0 {
+		str.WriteString("Teams for which welcome messages are defined:")
+		for team := range teams {
+			fmt.Fprintf(&str, "\n * %s", team)
+		}
 	}
 
-	var str strings.Builder
-	str.WriteString("Teams for which welcome messages are defined:")
-	for team := range teams {
-		str.WriteString(fmt.Sprintf("\n * %s", team))
+	if globalCount > 0 {
+		if str.Len() > 0 {
+			str.WriteString("\n\n")
+		}
+		fmt.Fprintf(&str, "Global welcome messages defined: %d. Use `/welcomebot preview_global` to preview.", globalCount)
 	}
 	p.postCommandResponse(args, str.String())
 }
@@ -273,6 +309,9 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 		teamName := parameters[0]
 		p.executeCommandPreview(teamName, args)
 		return &model.CommandResponse{}, nil
+	case commandTriggerPreviewGlobal:
+		p.executeCommandPreviewGlobal(args)
+		return &model.CommandResponse{}, nil
 	case commandTriggerList:
 		p.executeCommandList(args)
 		return &model.CommandResponse{}, nil
@@ -299,7 +338,7 @@ func (p *Plugin) ExecuteCommand(_ *plugin.Context, args *model.CommandArgs) (*mo
 
 func getAutocompleteData() *model.AutocompleteData {
 	welcomebot := model.NewAutocompleteData("welcomebot", "[command]",
-		"Available commands: welcome, preview, help, list, set_channel_welcome, get_channel_welcome, delete_channel_welcome")
+		"Available commands: welcome, preview, preview_global, help, list, set_channel_welcome, get_channel_welcome, delete_channel_welcome")
 
 	welcome := model.NewAutocompleteData("welcome", "", "Show the welcome message for the current channel (only visible to you)")
 	welcomebot.AddCommand(welcome)
@@ -308,7 +347,10 @@ func getAutocompleteData() *model.AutocompleteData {
 	preview.AddTextArgument("Team name to preview welcome message", "[team-name]", "")
 	welcomebot.AddCommand(preview)
 
-	list := model.NewAutocompleteData("list", "", "Lists team welcome messages")
+	previewGlobal := model.NewAutocompleteData("preview_global", "", "Preview the global welcome message sent to new users")
+	welcomebot.AddCommand(previewGlobal)
+
+	list := model.NewAutocompleteData("list", "", "Lists team and global welcome messages")
 	welcomebot.AddCommand(list)
 
 	setChannelWelcome := model.NewAutocompleteData("set_channel_welcome", "[welcome-message]", "Set the welcome message for the channel")

@@ -9,6 +9,27 @@ import (
 	"github.com/mattermost/mattermost/server/public/shared/mlog"
 )
 
+// UserHasBeenCreated is invoked after a user was created.
+func (p *Plugin) UserHasBeenCreated(_ *plugin.Context, user *model.User) {
+	data, err := p.newGlobalMessageTemplate(user)
+	if err != nil {
+		p.API.LogError("Unable to get global message template data", "UserID", user.Id, "Error", err.Error())
+		return
+	}
+
+	for _, message := range p.getWelcomeMessages() {
+		if user.IsGuest() && !message.IncludeGuests {
+			continue
+		}
+
+		if !message.isGlobal() {
+			continue
+		}
+
+		go p.processGlobalWelcomeMessage(*data, *message)
+	}
+}
+
 // UserHasJoinedTeam is invoked after the membership has been committed to the database. If
 // actor is not nil, the user was added to the team by the actor.
 func (p *Plugin) UserHasJoinedTeam(_ *plugin.Context, teamMember *model.TeamMember, _ *model.User) {
@@ -22,7 +43,7 @@ func (p *Plugin) UserHasJoinedTeam(_ *plugin.Context, teamMember *model.TeamMemb
 			continue
 		}
 
-		if message.TeamName == data.Team.Name {
+		if message.TeamName == data.Team.Name && !message.isGlobal() {
 			go p.processWelcomeMessage(*data, *message)
 		}
 	}

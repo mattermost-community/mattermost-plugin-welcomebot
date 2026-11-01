@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/mattermost/mattermost/server/public/model"
+	"github.com/pkg/errors"
 )
 
 func (p *Plugin) constructMessageTemplate(userID, teamID string) *MessageTemplate {
@@ -44,6 +45,20 @@ func (p *Plugin) constructMessageTemplate(userID, teamID string) *MessageTemplat
 	data.SiteURL = p.getSiteURL()
 
 	return data
+}
+
+func (p *Plugin) newGlobalMessageTemplate(user *model.User) (*MessageTemplate, error) {
+	directMessage, appErr := p.API.GetDirectChannel(user.Id, p.botUserID)
+	if appErr != nil {
+		return nil, errors.Wrap(appErr, "failed to query direct message channel")
+	}
+
+	return &MessageTemplate{
+		User:            user,
+		DirectMessage:   directMessage,
+		UserDisplayName: user.GetDisplayName(model.ShowNicknameFullName),
+		SiteURL:         p.getSiteURL(),
+	}, nil
 }
 
 func (p *Plugin) getSiteURL() string {
@@ -94,14 +109,41 @@ func (p *Plugin) previewWelcomeMessage(teamName string, args *model.CommandArgs,
 		return err
 	}
 
-	post := p.renderWelcomeMessage(*messageTemplate, configMessage)
+	post, err := p.renderWelcomeMessage(*messageTemplate, configMessage)
+	if err != nil {
+		return err
+	}
 	post.ChannelId = args.ChannelId
 	_ = p.API.SendEphemeralPost(args.UserId, post)
 
 	return nil
 }
 
-func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMessage ConfigMessage) *model.Post {
+func renderTemplate(name string, lines []string, data any) (string, error) {
+	tmpl, err := template.New(name).Parse(strings.Join(lines, "\n"))
+	if err != nil {
+		return "", fmt.Errorf("failed to parse %s template: %w", name, err)
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", fmt.Errorf("failed to execute %s template: %w", name, err)
+	}
+
+	return buf.String(), nil
+}
+
+func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMessage ConfigMessage) (*model.Post, error) {
+	message, err := renderTemplate(templateNameResponse, configMessage.Message, messageTemplate)
+	if err != nil {
+		return nil, err
+	}
+
+	attachMessage, err := renderTemplate("AttachmentResponse", configMessage.AttachmentMessage, messageTemplate)
+	if err != nil {
+		return nil, err
+	}
+
 	actionButtons := make([]*model.PostAction, 0)
 
 	for _, configAction := range configMessage.Actions {
@@ -135,34 +177,14 @@ func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMes
 		}
 	}
 
-	tmpMsg, _ := template.New("Response").Parse(strings.Join(configMessage.Message, "\n"))
-	var message bytes.Buffer
-	err := tmpMsg.Execute(&message, messageTemplate)
-	if err != nil {
-		p.API.LogError(
-			"Failed to execute message template",
-			"err", err.Error(),
-		)
-	}
-
 	post := &model.Post{
-		Message: message.String(),
+		Message: message,
 		UserId:  p.botUserID,
 	}
 
 	if len(configMessage.AttachmentMessage) > 0 || len(actionButtons) > 0 {
-		tmpAtch, _ := template.New("AttachmentResponse").Parse(strings.Join(configMessage.AttachmentMessage, "\n"))
-		var attachMessage bytes.Buffer
-		err := tmpAtch.Execute(&attachMessage, messageTemplate)
-		if err != nil {
-			p.API.LogError(
-				"Failed to execute message template",
-				"err", err.Error(),
-			)
-		}
-
 		sa1 := &model.SlackAttachment{
-			Text: attachMessage.String(),
+			Text: attachMessage,
 		}
 
 		if len(actionButtons) > 0 {
@@ -176,7 +198,7 @@ func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMes
 		}
 	}
 
-	return post
+	return post, nil
 }
 
 func (p *Plugin) processWelcomeMessage(messageTemplate MessageTemplate, configMessage ConfigMessage) {
@@ -187,7 +209,16 @@ func (p *Plugin) processWelcomeMessage(messageTemplate MessageTemplate, configMe
 		p.API.LogWarn(`Site url is set to localhost or 127.0.0.1.  For this to work properly you must also set "AllowedUntrustedInternalConnections": "127.0.0.1" in config.json`)
 	}
 
-	post := p.renderWelcomeMessage(messageTemplate, configMessage)
+	post, err := p.renderWelcomeMessage(messageTemplate, configMessage)
+	if err != nil {
+		p.API.LogError(
+			"Failed to render welcome message",
+			"user_id", messageTemplate.User.Id,
+			"team_id", messageTemplate.Team.Id,
+			"err", err.Error(),
+		)
+		return
+	}
 	post.ChannelId = messageTemplate.DirectMessage.Id
 
 	if _, err := p.API.CreatePost(post); err != nil {
@@ -199,12 +230,61 @@ func (p *Plugin) processWelcomeMessage(messageTemplate MessageTemplate, configMe
 	}
 }
 
+func (p *Plugin) renderGlobalWelcomeMessage(messageTemplate MessageTemplate, configMessage ConfigMessage) (*model.Post, error) {
+	message, err := renderTemplate(templateNameResponse, configMessage.GlobalWelcomeMessage, messageTemplate)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.Post{
+		Message: message,
+		UserId:  p.botUserID,
+	}, nil
+}
+
+func (p *Plugin) previewGlobalWelcomeMessage(args *model.CommandArgs, configMessage ConfigMessage) error {
+	user, appErr := p.API.GetUser(args.UserId)
+	if appErr != nil {
+		return errors.Wrap(appErr, "failed to query user")
+	}
+
+	messageTemplate, err := p.newGlobalMessageTemplate(user)
+	if err != nil {
+		return err
+	}
+
+	post, err := p.renderGlobalWelcomeMessage(*messageTemplate, configMessage)
+	if err != nil {
+		return err
+	}
+	post.ChannelId = args.ChannelId
+	_ = p.API.SendEphemeralPost(args.UserId, post)
+
+	return nil
+}
+
+func (p *Plugin) processGlobalWelcomeMessage(messageTemplate MessageTemplate, configMessage ConfigMessage) {
+	post, err := p.renderGlobalWelcomeMessage(messageTemplate, configMessage)
+	if err != nil {
+		p.API.LogError("Failed to render global welcome message", "user_id", messageTemplate.User.Id, "err", err.Error())
+		return
+	}
+
+	time.Sleep(time.Second * time.Duration(configMessage.DelayInSeconds))
+
+	post.ChannelId = messageTemplate.DirectMessage.Id
+
+	if _, appErr := p.API.CreatePost(post); appErr != nil {
+		p.API.LogError("We could not create the global welcome post", "user_id", messageTemplate.User.Id, "err", appErr.Error())
+	}
+}
+
 func (p *Plugin) processActionMessage(messageTemplate MessageTemplate, action *Action, configMessageAction ConfigMessageAction) {
 	for _, channelName := range configMessageAction.ChannelsAddedTo {
 		p.joinChannel(action, channelName)
 	}
 
-	tmpMsg, _ := template.New("Response").Parse(strings.Join(configMessageAction.ActionSuccessfulMessage, "\n"))
+	tmpMsg, _ := template.New(templateNameResponse).Parse(strings.Join(configMessageAction.ActionSuccessfulMessage, "\n"))
 	var message bytes.Buffer
 	err := tmpMsg.Execute(&message, messageTemplate)
 	if err != nil {

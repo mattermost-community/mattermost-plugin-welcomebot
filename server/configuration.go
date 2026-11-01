@@ -27,6 +27,9 @@ type ConfigMessageAction struct {
 
 // ConfigMessage represents the message to send in channel
 type ConfigMessage struct {
+	// This message will send a global welcome message using the bot
+	GlobalWelcomeMessage []string
+
 	// This message will fire when it matches the supplied team
 	TeamName string
 
@@ -44,6 +47,10 @@ type ConfigMessage struct {
 
 	// Whether or not to include guest users
 	IncludeGuests bool
+}
+
+func (m *ConfigMessage) isGlobal() bool {
+	return len(m.GlobalWelcomeMessage) > 0
 }
 
 // defaultAutoJoinDelaySeconds is used when ChannelWelcomeAutoJoinDelaySeconds
