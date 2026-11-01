@@ -116,14 +116,41 @@ func (p *Plugin) previewWelcomeMessage(teamName string, args *model.CommandArgs,
 		return err
 	}
 
-	post := p.renderWelcomeMessage(*messageTemplate, configMessage)
+	post, err := p.renderWelcomeMessage(*messageTemplate, configMessage)
+	if err != nil {
+		return err
+	}
 	post.ChannelId = args.ChannelId
 	_ = p.API.SendEphemeralPost(args.UserId, post)
 
 	return nil
 }
 
-func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMessage ConfigMessage) *model.Post {
+func renderTemplate(name string, lines []string, data any) (string, error) {
+	tmpl, err := template.New(name).Parse(strings.Join(lines, "\n"))
+	if err != nil {
+		return "", fmt.Errorf("failed to parse %s template: %w", name, err)
+	}
+
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", fmt.Errorf("failed to execute %s template: %w", name, err)
+	}
+
+	return buf.String(), nil
+}
+
+func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMessage ConfigMessage) (*model.Post, error) {
+	message, err := renderTemplate(templateNameResponse, configMessage.Message, messageTemplate)
+	if err != nil {
+		return nil, err
+	}
+
+	attachMessage, err := renderTemplate("AttachmentResponse", configMessage.AttachmentMessage, messageTemplate)
+	if err != nil {
+		return nil, err
+	}
+
 	actionButtons := make([]*model.PostAction, 0)
 
 	for _, configAction := range configMessage.Actions {
@@ -157,34 +184,14 @@ func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMes
 		}
 	}
 
-	tmpMsg, _ := template.New(templateNameResponse).Parse(strings.Join(configMessage.Message, "\n"))
-	var message bytes.Buffer
-	err := tmpMsg.Execute(&message, messageTemplate)
-	if err != nil {
-		p.API.LogError(
-			"Failed to execute message template",
-			"err", err.Error(),
-		)
-	}
-
 	post := &model.Post{
-		Message: message.String(),
+		Message: message,
 		UserId:  p.botUserID,
 	}
 
 	if len(configMessage.AttachmentMessage) > 0 || len(actionButtons) > 0 {
-		tmpAtch, _ := template.New("AttachmentResponse").Parse(strings.Join(configMessage.AttachmentMessage, "\n"))
-		var attachMessage bytes.Buffer
-		err := tmpAtch.Execute(&attachMessage, messageTemplate)
-		if err != nil {
-			p.API.LogError(
-				"Failed to execute message template",
-				"err", err.Error(),
-			)
-		}
-
 		sa1 := &model.SlackAttachment{
-			Text: attachMessage.String(),
+			Text: attachMessage,
 		}
 
 		if len(actionButtons) > 0 {
@@ -198,7 +205,7 @@ func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMes
 		}
 	}
 
-	return post
+	return post, nil
 }
 
 func (p *Plugin) processWelcomeMessage(messageTemplate MessageTemplate, configMessage ConfigMessage) {
@@ -209,7 +216,16 @@ func (p *Plugin) processWelcomeMessage(messageTemplate MessageTemplate, configMe
 		p.API.LogWarn(`Site url is set to localhost or 127.0.0.1.  For this to work properly you must also set "AllowedUntrustedInternalConnections": "127.0.0.1" in config.json`)
 	}
 
-	post := p.renderWelcomeMessage(messageTemplate, configMessage)
+	post, err := p.renderWelcomeMessage(messageTemplate, configMessage)
+	if err != nil {
+		p.API.LogError(
+			"Failed to render welcome message",
+			"user_id", messageTemplate.User.Id,
+			"team_id", messageTemplate.Team.Id,
+			"err", err.Error(),
+		)
+		return
+	}
 	post.ChannelId = messageTemplate.DirectMessage.Id
 
 	if _, err := p.API.CreatePost(post); err != nil {
@@ -218,6 +234,26 @@ func (p *Plugin) processWelcomeMessage(messageTemplate MessageTemplate, configMe
 			"user_id", post.UserId,
 			"err", err.Error(),
 		)
+	}
+}
+
+func (p *Plugin) processGlobalWelcomeMessage(messageTemplate GlobalMessageTemplate, configMessage ConfigMessage) {
+	message, err := renderTemplate(templateNameResponse, configMessage.GlobalWelcomeMessage, messageTemplate)
+	if err != nil {
+		p.API.LogError("Failed to render global welcome message", "user_id", messageTemplate.User.Id, "err", err.Error())
+		return
+	}
+
+	time.Sleep(time.Second * time.Duration(configMessage.DelayInSeconds))
+
+	post := &model.Post{
+		Message:   message,
+		UserId:    p.botUserID,
+		ChannelId: messageTemplate.DirectMessage.Id,
+	}
+
+	if _, appErr := p.API.CreatePost(post); appErr != nil {
+		p.API.LogError("We could not create the global welcome post", "user_id", messageTemplate.User.Id, "err", appErr.Error())
 	}
 }
 

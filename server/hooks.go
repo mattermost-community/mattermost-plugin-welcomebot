@@ -1,10 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
-	"html/template"
-	"strings"
 	"time"
 
 	"github.com/mattermost/mattermost/server/public/model"
@@ -28,23 +25,8 @@ func (p *Plugin) UserHasBeenCreated(c *plugin.Context, user *model.User) {
 		if len(message.GlobalWelcomeMessage) == 0 {
 			continue
 		}
-		
-		tmpMsg, _ := template.New(templateNameResponse).Parse(strings.Join(message.GlobalWelcomeMessage, "\n"))
-		var message bytes.Buffer
-		err := tmpMsg.Execute(&message, data)
-		if err != nil {
-			p.API.LogError("Failed to execute message template", "Error", err.Error())
-		}
 
-		post := &model.Post{
-			Message:   message.String(),
-			UserId:    p.botUserID,
-			ChannelId: data.DirectMessage.Id,
-		}
-
-		if _, err := p.API.CreatePost(post); err != nil {
-			p.API.LogError("We could not create the response post", "UserID", post.UserId, "Error", err.Error())
-		}
+		go p.processGlobalWelcomeMessage(*data, *message)
 	}
 }
 

@@ -210,7 +210,7 @@ To accomplish the above, you can specify the following configuration in your `co
                                 "ActionSuccessfulMessage": [
                                     "### Awesome! I've added you to the following developer channels:",
                                     "~leads - To stay updated on incoming leads",
-                                    "~sales-discussion - To collaborate with your fellow Customer Engineers,
+                                    "~sales-discussion - To collaborate with your fellow Customer Engineers",
                                     "~win-loss-analysis - To conduct win-loss analysis of closed deals"
                                 ]
                             },
@@ -251,8 +251,8 @@ To accomplish the above, you can specify the following configuration in your `co
                     {
                         "DelayInSeconds": 5,
                         "GlobalWelcomeMessage": [
-                            "### Welcome {{.UserDisplayName}} to the Mattermost!",
-                        ],
+                            "### Welcome {{.UserDisplayName}} to the Mattermost!"
+                        ]
                     }
                 ]
             }
