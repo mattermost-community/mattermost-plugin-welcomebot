@@ -49,6 +49,10 @@ type ConfigMessage struct {
 	IncludeGuests bool
 }
 
+func (m *ConfigMessage) isGlobal() bool {
+	return len(m.GlobalWelcomeMessage) > 0
+}
+
 // defaultAutoJoinDelaySeconds is used when ChannelWelcomeAutoJoinDelaySeconds
 // is not set or is set to zero. 5 seconds gives most clients enough time to
 // render the channel before the ephemeral arrives.

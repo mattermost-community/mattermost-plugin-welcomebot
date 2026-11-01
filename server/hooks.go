@@ -22,7 +22,7 @@ func (p *Plugin) UserHasBeenCreated(_ *plugin.Context, user *model.User) {
 			continue
 		}
 
-		if len(message.GlobalWelcomeMessage) == 0 {
+		if !message.isGlobal() {
 			continue
 		}
 
@@ -43,7 +43,7 @@ func (p *Plugin) UserHasJoinedTeam(_ *plugin.Context, teamMember *model.TeamMemb
 			continue
 		}
 
-		if message.TeamName == data.Team.Name && len(message.GlobalWelcomeMessage) == 0 {
+		if message.TeamName == data.Team.Name && !message.isGlobal() {
 			go p.processWelcomeMessage(*data, *message)
 		}
 	}

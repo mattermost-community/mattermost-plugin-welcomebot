@@ -237,8 +237,36 @@ func (p *Plugin) processWelcomeMessage(messageTemplate MessageTemplate, configMe
 	}
 }
 
-func (p *Plugin) processGlobalWelcomeMessage(messageTemplate GlobalMessageTemplate, configMessage ConfigMessage) {
+func (p *Plugin) renderGlobalWelcomeMessage(messageTemplate GlobalMessageTemplate, configMessage ConfigMessage) (*model.Post, error) {
 	message, err := renderTemplate(templateNameResponse, configMessage.GlobalWelcomeMessage, messageTemplate)
+	if err != nil {
+		return nil, err
+	}
+
+	return &model.Post{
+		Message: message,
+		UserId:  p.botUserID,
+	}, nil
+}
+
+func (p *Plugin) previewGlobalWelcomeMessage(args *model.CommandArgs, configMessage ConfigMessage) error {
+	messageTemplate, err := p.getGlobalMessageTemplateData(args.UserId)
+	if err != nil {
+		return err
+	}
+
+	post, err := p.renderGlobalWelcomeMessage(*messageTemplate, configMessage)
+	if err != nil {
+		return err
+	}
+	post.ChannelId = args.ChannelId
+	_ = p.API.SendEphemeralPost(args.UserId, post)
+
+	return nil
+}
+
+func (p *Plugin) processGlobalWelcomeMessage(messageTemplate GlobalMessageTemplate, configMessage ConfigMessage) {
+	post, err := p.renderGlobalWelcomeMessage(messageTemplate, configMessage)
 	if err != nil {
 		p.API.LogError("Failed to render global welcome message", "user_id", messageTemplate.User.Id, "err", err.Error())
 		return
@@ -246,11 +274,7 @@ func (p *Plugin) processGlobalWelcomeMessage(messageTemplate GlobalMessageTempla
 
 	time.Sleep(time.Second * time.Duration(configMessage.DelayInSeconds))
 
-	post := &model.Post{
-		Message:   message,
-		UserId:    p.botUserID,
-		ChannelId: messageTemplate.DirectMessage.Id,
-	}
+	post.ChannelId = messageTemplate.DirectMessage.Id
 
 	if _, appErr := p.API.CreatePost(post); appErr != nil {
 		p.API.LogError("We could not create the global welcome post", "user_id", messageTemplate.User.Id, "err", appErr.Error())
