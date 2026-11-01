@@ -10,7 +10,7 @@ import (
 )
 
 // UserHasBeenCreated is invoked after a user was created.
-func (p *Plugin) UserHasBeenCreated(c *plugin.Context, user *model.User) {
+func (p *Plugin) UserHasBeenCreated(_ *plugin.Context, user *model.User) {
 	data, err := p.getGlobalMessageTemplateData(user.Id)
 	if err != nil {
 		p.API.LogError("Unable to get global message template data", "UserID", user.Id, "Error", err.Error())
