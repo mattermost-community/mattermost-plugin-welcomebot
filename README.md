@@ -279,6 +279,8 @@ type MessageTemplate struct {
 }
 ```
 
+`GlobalWelcomeMessage` templates use the same fields, except `Team` and `Townsquare`, which are not set because the message is not tied to a team. Referencing them causes the message to fail to render, and it is not sent.
+
 ## Development
 
 This plugin contains a server portion. Read our documentation about the [Developer Workflow](https://developers.mattermost.com/integrate/plugins/developer-workflow/) and [Developer Setup](https://developers.mattermost.com/integrate/plugins/developer-setup/) for more information about developing and extending plugins.

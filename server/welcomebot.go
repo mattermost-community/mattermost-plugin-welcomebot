@@ -47,25 +47,18 @@ func (p *Plugin) constructMessageTemplate(userID, teamID string) *MessageTemplat
 	return data
 }
 
-func (p *Plugin) getGlobalMessageTemplateData(userID string) (*GlobalMessageTemplate, error) {
-	data := &GlobalMessageTemplate{}
-	var appErr *model.AppError
-
-	if len(userID) > 0 {
-		if data.User, appErr = p.API.GetUser(userID); appErr != nil {
-			return nil, errors.Wrap(appErr, "failed to query user")
-		}
+func (p *Plugin) newGlobalMessageTemplate(user *model.User) (*MessageTemplate, error) {
+	directMessage, appErr := p.API.GetDirectChannel(user.Id, p.botUserID)
+	if appErr != nil {
+		return nil, errors.Wrap(appErr, "failed to query direct message channel")
 	}
 
-	if data.User != nil {
-		if data.DirectMessage, appErr = p.API.GetDirectChannel(userID, p.botUserID); appErr != nil {
-			return nil, errors.Wrap(appErr, "failed to query direct message channel")
-		}
-	}
-
-	data.UserDisplayName = data.User.GetDisplayName(model.ShowNicknameFullName)
-
-	return data, nil
+	return &MessageTemplate{
+		User:            user,
+		DirectMessage:   directMessage,
+		UserDisplayName: user.GetDisplayName(model.ShowNicknameFullName),
+		SiteURL:         p.getSiteURL(),
+	}, nil
 }
 
 func (p *Plugin) getSiteURL() string {
@@ -237,7 +230,7 @@ func (p *Plugin) processWelcomeMessage(messageTemplate MessageTemplate, configMe
 	}
 }
 
-func (p *Plugin) renderGlobalWelcomeMessage(messageTemplate GlobalMessageTemplate, configMessage ConfigMessage) (*model.Post, error) {
+func (p *Plugin) renderGlobalWelcomeMessage(messageTemplate MessageTemplate, configMessage ConfigMessage) (*model.Post, error) {
 	message, err := renderTemplate(templateNameResponse, configMessage.GlobalWelcomeMessage, messageTemplate)
 	if err != nil {
 		return nil, err
@@ -250,7 +243,12 @@ func (p *Plugin) renderGlobalWelcomeMessage(messageTemplate GlobalMessageTemplat
 }
 
 func (p *Plugin) previewGlobalWelcomeMessage(args *model.CommandArgs, configMessage ConfigMessage) error {
-	messageTemplate, err := p.getGlobalMessageTemplateData(args.UserId)
+	user, appErr := p.API.GetUser(args.UserId)
+	if appErr != nil {
+		return errors.Wrap(appErr, "failed to query user")
+	}
+
+	messageTemplate, err := p.newGlobalMessageTemplate(user)
 	if err != nil {
 		return err
 	}
@@ -265,7 +263,7 @@ func (p *Plugin) previewGlobalWelcomeMessage(args *model.CommandArgs, configMess
 	return nil
 }
 
-func (p *Plugin) processGlobalWelcomeMessage(messageTemplate GlobalMessageTemplate, configMessage ConfigMessage) {
+func (p *Plugin) processGlobalWelcomeMessage(messageTemplate MessageTemplate, configMessage ConfigMessage) {
 	post, err := p.renderGlobalWelcomeMessage(messageTemplate, configMessage)
 	if err != nil {
 		p.API.LogError("Failed to render global welcome message", "user_id", messageTemplate.User.Id, "err", err.Error())
