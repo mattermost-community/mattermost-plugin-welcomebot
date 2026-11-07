@@ -11,6 +11,68 @@ import (
 	"github.com/pkg/errors"
 )
 
+// markdownMetaChars lists the ASCII punctuation that CommonMark treats as
+// syntax. Escaping these characters in untrusted values keeps them literal
+// when Mattermost renders post.Message and SlackAttachment.Text as Markdown.
+const markdownMetaChars = "\\`*_{}[]()#+-.!|>~"
+
+// escapeMarkdown escapes CommonMark metacharacters so an untrusted value
+// cannot become an active link, image, emphasis, or other Markdown construct.
+func escapeMarkdown(value string) string {
+	var b strings.Builder
+	b.Grow(len(value))
+	for _, r := range value {
+		if strings.ContainsRune(markdownMetaChars, r) {
+			b.WriteRune('\\')
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
+}
+
+// sanitizeUser returns a copy of user with its free-form string fields escaped
+// for Markdown. Username and Email are left untouched: Mattermost restricts
+// them to characters that cannot introduce Markdown syntax, and escaping them
+// would break @mention detection on the raw post text. Id and other machine
+// fields are also left untouched.
+func sanitizeUser(user *model.User) *model.User {
+	if user == nil {
+		return nil
+	}
+	safe := *user
+	safe.Nickname = escapeMarkdown(user.Nickname)
+	safe.FirstName = escapeMarkdown(user.FirstName)
+	safe.LastName = escapeMarkdown(user.LastName)
+	return &safe
+}
+
+// sanitizeTeam returns a copy of team with its free-form string fields escaped
+// for Markdown. Name and Id are left untouched because they are used as lookup
+// and comparison keys.
+func sanitizeTeam(team *model.Team) *model.Team {
+	if team == nil {
+		return nil
+	}
+	safe := *team
+	safe.DisplayName = escapeMarkdown(team.DisplayName)
+	safe.Description = escapeMarkdown(team.Description)
+	safe.Email = escapeMarkdown(team.Email)
+	return &safe
+}
+
+// sanitizeChannel returns a copy of channel with its free-form string fields
+// escaped for Markdown. Id and Name are left untouched.
+func sanitizeChannel(channel *model.Channel) *model.Channel {
+	if channel == nil {
+		return nil
+	}
+	safe := *channel
+	safe.DisplayName = escapeMarkdown(channel.DisplayName)
+	safe.Header = escapeMarkdown(channel.Header)
+	safe.Purpose = escapeMarkdown(channel.Purpose)
+	return &safe
+}
+
 func (p *Plugin) constructMessageTemplate(userID, teamID string) *MessageTemplate {
 	data := &MessageTemplate{}
 	var err *model.AppError
@@ -41,6 +103,10 @@ func (p *Plugin) constructMessageTemplate(userID, teamID string) *MessageTemplat
 		}
 	}
 
+	data.User = sanitizeUser(data.User)
+	data.Team = sanitizeTeam(data.Team)
+	data.Townsquare = sanitizeChannel(data.Townsquare)
+	data.DirectMessage = sanitizeChannel(data.DirectMessage)
 	data.UserDisplayName = data.User.GetDisplayName(model.ShowNicknameFullName)
 	data.SiteURL = p.getSiteURL()
 
@@ -53,10 +119,11 @@ func (p *Plugin) newGlobalMessageTemplate(user *model.User) (*MessageTemplate, e
 		return nil, errors.Wrap(appErr, "failed to query direct message channel")
 	}
 
+	safeUser := sanitizeUser(user)
 	return &MessageTemplate{
-		User:            user,
-		DirectMessage:   directMessage,
-		UserDisplayName: user.GetDisplayName(model.ShowNicknameFullName),
+		User:            safeUser,
+		DirectMessage:   sanitizeChannel(directMessage),
+		UserDisplayName: safeUser.GetDisplayName(model.ShowNicknameFullName),
 		SiteURL:         p.getSiteURL(),
 	}, nil
 }
@@ -97,6 +164,10 @@ func (p *Plugin) newSampleMessageTemplate(teamName string, userID string) (*Mess
 		return nil, fmt.Errorf("failed to query direct message channel %s: %w", data.User.Id, err)
 	}
 
+	data.User = sanitizeUser(data.User)
+	data.Team = sanitizeTeam(data.Team)
+	data.Townsquare = sanitizeChannel(data.Townsquare)
+	data.DirectMessage = sanitizeChannel(data.DirectMessage)
 	data.UserDisplayName = data.User.GetDisplayName(model.ShowNicknameFullName)
 	data.SiteURL = p.getSiteURL()
 
@@ -109,7 +180,7 @@ func (p *Plugin) previewWelcomeMessage(teamName string, args *model.CommandArgs,
 		return err
 	}
 
-	post, err := p.renderWelcomeMessage(*messageTemplate, configMessage)
+	post, err := p.renderWelcomeMessage(*messageTemplate, configMessage, false)
 	if err != nil {
 		return err
 	}
@@ -133,7 +204,7 @@ func renderTemplate(name string, lines []string, data any) (string, error) {
 	return buf.String(), nil
 }
 
-func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMessage ConfigMessage) (*model.Post, error) {
+func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMessage ConfigMessage, performActions bool) (*model.Post, error) {
 	message, err := renderTemplate(templateNameResponse, configMessage.Message, messageTemplate)
 	if err != nil {
 		return nil, err
@@ -147,7 +218,7 @@ func (p *Plugin) renderWelcomeMessage(messageTemplate MessageTemplate, configMes
 	actionButtons := make([]*model.PostAction, 0)
 
 	for _, configAction := range configMessage.Actions {
-		if configAction.ActionType == actionTypeAutomatic {
+		if performActions && configAction.ActionType == actionTypeAutomatic {
 			action := &Action{}
 			action.UserID = messageTemplate.User.Id
 			action.Context = &ActionContext{}
@@ -209,7 +280,7 @@ func (p *Plugin) processWelcomeMessage(messageTemplate MessageTemplate, configMe
 		p.API.LogWarn(`Site url is set to localhost or 127.0.0.1.  For this to work properly you must also set "AllowedUntrustedInternalConnections": "127.0.0.1" in config.json`)
 	}
 
-	post, err := p.renderWelcomeMessage(messageTemplate, configMessage)
+	post, err := p.renderWelcomeMessage(messageTemplate, configMessage, true)
 	if err != nil {
 		p.API.LogError(
 			"Failed to render welcome message",
@@ -284,10 +355,14 @@ func (p *Plugin) processActionMessage(messageTemplate MessageTemplate, action *A
 		p.joinChannel(action, channelName)
 	}
 
-	tmpMsg, _ := template.New(templateNameResponse).Parse(strings.Join(configMessageAction.ActionSuccessfulMessage, "\n"))
-	var message bytes.Buffer
-	err := tmpMsg.Execute(&message, messageTemplate)
+	tmpMsg, err := template.New(templateNameResponse).Parse(strings.Join(configMessageAction.ActionSuccessfulMessage, "\n"))
 	if err != nil {
+		p.API.LogError("Failed to parse message template", "err", err.Error())
+		return
+	}
+
+	var message bytes.Buffer
+	if err := tmpMsg.Execute(&message, messageTemplate); err != nil {
 		p.API.LogError(
 			"Failed to execute message template",
 			"err", err.Error(),

@@ -69,6 +69,9 @@ func (p *Plugin) ServeHTTP(_ *plugin.Context, w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	data.User = sanitizeUser(data.User)
+	data.Team = sanitizeTeam(data.Team)
+	data.DirectMessage = sanitizeChannel(data.DirectMessage)
 	data.UserDisplayName = data.User.GetDisplayName(model.ShowNicknameFullName)
 	data.SiteURL = p.getSiteURL()
 
@@ -86,13 +89,22 @@ func (p *Plugin) ServeHTTP(_ *plugin.Context, w http.ResponseWriter, r *http.Req
 	switch r.URL.Path {
 	case "/addchannels":
 		for _, wm := range p.getWelcomeMessages() {
-			if data.Team.Name == wm.TeamName {
-				for _, ac := range wm.Actions {
-					if ac.ActionName == action.Context.Action {
-						p.processActionMessage(*data, action, *ac)
-						p.encodeEphemeralMessage(w, "")
-						return
-					}
+			if data.Team.Name != wm.TeamName {
+				continue
+			}
+
+			// Apply the same guest policy as the team-join hook. Without this
+			// check a guest can bypass IncludeGuests by calling the endpoint
+			// directly instead of waiting for the welcome flow.
+			if data.User.IsGuest() && !wm.IncludeGuests {
+				continue
+			}
+
+			for _, ac := range wm.Actions {
+				if ac.ActionName == action.Context.Action {
+					p.processActionMessage(*data, action, *ac)
+					p.encodeEphemeralMessage(w, "")
+					return
 				}
 			}
 		}
