@@ -133,19 +133,55 @@ func (p *Plugin) executeCommandWelcome(args *model.CommandArgs) {
 }
 
 func (p *Plugin) executeCommandPreview(teamName string, args *model.CommandArgs) {
-	found := false
+	var matched []*ConfigMessage
 	for _, message := range p.getWelcomeMessages() {
 		if message.TeamName == teamName && !message.isGlobal() {
-			if err := p.previewWelcomeMessage(teamName, args, *message); err != nil {
-				p.postCommandResponse(args, "error occurred while processing greeting for team `%s`: `%s`", teamName, err)
-				return
-			}
-
-			found = true
+			matched = append(matched, message)
 		}
 	}
 
-	if !found {
+	if len(matched) == 0 {
+		p.postCommandResponse(args, "team `%s` has not been found", teamName)
+		return
+	}
+
+	// A preview discloses team-scoped content and renders the message with the
+	// caller's identity. Require a live team membership before doing either.
+	team, appErr := p.API.GetTeamByName(strings.ToLower(teamName))
+	if appErr != nil {
+		p.postCommandResponse(args, "team `%s` has not been found", teamName)
+		return
+	}
+
+	user, appErr := p.API.GetUser(args.UserId)
+	if appErr != nil {
+		p.postCommandResponse(args, "error occurred while processing greeting for team `%s`", teamName)
+		return
+	}
+
+	teamMember, appErr := p.API.GetTeamMember(team.Id, args.UserId)
+	if appErr != nil || teamMember == nil || teamMember.DeleteAt > 0 {
+		p.postCommandResponse(args, "team `%s` has not been found", teamName)
+		return
+	}
+
+	sent := false
+	for _, message := range matched {
+		// Apply the same guest policy as the team-join hook. Preview must not
+		// disclose a message that the caller would never receive on join.
+		if user.IsGuest() && !message.IncludeGuests {
+			continue
+		}
+
+		if err := p.previewWelcomeMessage(teamName, args, *message); err != nil {
+			p.postCommandResponse(args, "error occurred while processing greeting for team `%s`: `%s`", teamName, err)
+			return
+		}
+
+		sent = true
+	}
+
+	if !sent {
 		p.postCommandResponse(args, "team `%s` has not been found", teamName)
 	}
 }
