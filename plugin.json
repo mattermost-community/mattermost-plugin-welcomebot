@@ -14,8 +14,11 @@
       "windows-amd64": "server/dist/plugin-windows-amd64.exe"
     }
   },
+  "webapp": {
+    "bundle_path": "webapp/dist/main.js"
+  },
   "settings_schema": {
-      "header": "Team welcome messages (WelcomeMessages) are configured directly in config.json. Learn more [in our documentation](https://github.com/mattermost/mattermost-plugin-welcomebot/blob/master/README.md).\n\n To report an issue, make a suggestion, or submit a contribution, [check the plugin repository](https://github.com/mattermost/mattermost-plugin-welcomebot).",
+      "header": "Team welcome messages can be configured below (per-team message text, delay, guest inclusion, and channel-join actions). For bulk or scripted setups, WelcomeMessages can still be provided directly in config.json using the same structure - both paths write the same setting, so avoid making concurrent changes through both at once. Learn more [in our documentation](https://github.com/mattermost/mattermost-plugin-welcomebot/blob/master/README.md).\n\n To report an issue, make a suggestion, or submit a contribution, [check the plugin repository](https://github.com/mattermost/mattermost-plugin-welcomebot).",
       "settings": [
           {
               "key": "ChannelWelcomeAutoJoinDelaySeconds",
@@ -24,6 +27,12 @@
               "help_text": "How long to wait (in seconds) before sending the channel welcome ephemeral after a user joins. Applies to all join types. Increase if users report the welcome appearing before the channel has loaded. Default: 5.",
               "placeholder": "5",
               "default": 5
+          },
+          {
+              "key": "WelcomeMessages",
+              "display_name": "Welcome Messages",
+              "type": "custom",
+              "help_text": "Configure per-team welcome messages, including message text, delay, guest inclusion, and follow-up actions that add users to channels. Changes here take effect immediately on Save - no server restart required."
           }
       ]
   }
